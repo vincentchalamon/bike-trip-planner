@@ -7,19 +7,20 @@
 entryPoints:
   web:
     address: ":80"
-    # cloudflared sets X-Forwarded-For to the real client IP; trust the docker
-    # bridge ranges so Traefik preserves it end-to-end (plan W5.2).
+    # cloudflared sets X-Forwarded-For to the real client IP; trust it from the
+    # `edge` subnet only (cloudflared's network), so Traefik preserves it
+    # end-to-end (plan W5.2). A preview container reaching Traefik over
+    # edge-preview is not trusted: its X-Forwarded-For is replaced.
     forwardedHeaders:
       trustedIPs:
         - 127.0.0.1/32
-        - 10.0.0.0/8
-        - 172.16.0.0/12
-        - 192.168.0.0/16
+        - {{ edge_subnet }}
 
 providers:
   docker:
     exposedByDefault: false
-    # Only containers on the `edge` network are routable.
+    # Default network to reach a container on. Preview php overrides it with the
+    # `traefik.docker.network=edge-preview` label.
     network: edge
 
 api:

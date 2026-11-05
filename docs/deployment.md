@@ -14,15 +14,20 @@ no public port. The reasoning is in [ADR-061](adr/adr-061-deployment-ansible-gha
 
 | Job                 | Runs on                        | Does                                                                 |
 |---------------------|--------------------------------|----------------------------------------------------------------------|
-| `build-images`      | `v*` tag, same-repo pull request | Builds `php`, `pwa` and `provisioner` for `linux/arm64` on a native ARM runner and pushes them to `ghcr.io/vincentchalamon/bike-trip-planner-<service>`, tagged `:<sha>` plus `:<tag>` or `:pr-<n>`. Keeps the 10 most recent versions of each image, never pruning `vX.Y.Z` tags |
+| `build-images`      | `v*` tag, same-repo pull request | Builds `php`, `pwa` and `provisioner` for `linux/arm64` on a native ARM runner. A tag pushes `ghcr.io/vincentchalamon/bike-trip-planner-<service>:<sha>` and `:<tag>`; a pull request pushes only `bike-trip-planner-<service>-preview:pr-<n>`, a separate package. Outputs the image digests. Keeps the 10 most recent versions of each image, never pruning `vX.Y.Z` tags |
 | `upload-sourcemaps` | `v*` tag                       | Builds the web app with the `SENTRY_*` secrets so `withSentryConfig` uploads the source maps, then deletes them. Skipped when those secrets are missing; the deployed image never ships source maps |
-| `deploy-prod`       | `v*` tag                       | SSHes to the VM, checks out the tag and runs `btp-compose up -d --pull always` (images pinned to that tag) |
+| `deploy-prod`       | `v*` tag                       | SSHes to the VM and runs `deploy-prod.sh <tag> <commit> <digests>`: records them on the first deploy of the tag, checks out the tag and rolls the stack through `btp-compose`, which runs the images by digest |
 | `smoke-test`        | after `deploy-prod`            | Probes `/api/healthz`, then `/api/health` until `status` is `ok`; on failure raises a `repository_dispatch` (`uptime_alert`) that `incident-create.yml` turns into an incident issue |
-| `deploy-preview`    | same-repo pull request         | Deploys the PR to `pr-<n>.${DOMAIN}` from its own checkout, with its own PG-app and Redis |
-| `teardown-preview`  | pull request closed            | `docker compose down -v` on the preview and deletes its checkout     |
+| `deploy-preview`    | same-repo pull request         | Sends `deploy <pr> <php-digest> <pwa-digest>` to the VM's `btp-preview` forced command, which runs the PR images at `pr-<n>.${DOMAIN}` with its own PG-app and Redis, using main's compose files |
+| `teardown-preview`  | pull request closed            | Sends `teardown <pr>`: `docker compose down -v` on the preview      |
 
-The SSH jobs are no-ops while `SSH_HOST`, `SSH_USER` or `SSH_KEY` is unset (forks, or before the
-VM exists): a tag then only builds and pushes the images. Forks never build or deploy.
+The SSH jobs are no-ops while `SSH_HOST`, `SSH_USER` or `SSH_KEY` is unset (before the VM
+exists): a tag then only builds and pushes the images. When they are set, `SSH_KNOWN_HOSTS` is
+required; a job fails rather than trust a host key it scanned. Forks never build or deploy.
+
+Only `build-images` gets `packages: write`. `upload-sourcemaps`, `deploy-prod` and `smoke-test`
+bind the `production` environment, the preview jobs the `preview` one (see
+[the GitHub configuration](#configure-github)).
 
 Database migrations run when the `php` container boots
 ([ADR-032](adr/adr-032-migrations-and-rollback-strategy.md)).
@@ -44,12 +49,20 @@ Database migrations run when the `php` container boots
 
 ## Preview a pull request
 
-Open the pull request from a branch of this repository. `deploy-preview` publishes it at
-`https://pr-<n>.${DOMAIN}`; every push redeploys it and closing the PR tears it down.
+Open the pull request from a branch of this repository. Once a reviewer of the `preview`
+environment approves the run, `deploy-preview` publishes it at `https://pr-<n>.${DOMAIN}`; every
+push redeploys it and closing the PR tears it down (the teardown waits for the same approval).
 
-A preview shares the production Valhalla and PG-reference, but has its own PG-app and Redis and
-reads its own non-production env file (`preview.env`). Each one budgets about 2 GB of RAM, so keep
-the number of open previews small. A change to the reference schema cannot be previewed, because
+The PR only chooses the images. The VM side is the `btp-preview` forced command of a dedicated
+`preview-deploy` user: it pulls the PR images by digest and runs them with the compose files of
+its own checkout of `main` (`/opt/bike-trip-planner-previews/base`). A PR that changes
+`compose.yaml` or `deploy/preview/compose.yaml` is therefore previewed with main's version of
+those files.
+
+A preview reads the production Valhalla and PG-reference (over `btp-shared-preview`, never prod's
+networks), but has its own PG-app and Redis and reads its own non-production env file
+(`/opt/bike-trip-planner-previews/preview.env`). Each one budgets about 2 GB of RAM, so keep the
+number of open previews small. A change to the reference schema cannot be previewed, because
 previews never migrate the shared PG-reference.
 
 ## Roll back
@@ -62,26 +75,41 @@ VM, the equivalent is:
 ```
 
 Both check out the tag and roll the stack through `btp-compose`, the Ansible-installed wrapper
-every production compose call goes through: it takes the image tag from the tag the checkout is
-on, so the images always match the compose files that run them.
+every production compose call goes through. It runs the images recorded for the tag the checkout
+is on, by digest, and refuses to run if the tag moved since. The record
+(`/etc/bike-trip-planner/releases/<tag>`) is written by the tag's first `deploy-prod`; a VM
+rebuilt since has none, so re-run that job, or pass the commit and digests listed in its run
+summary: `deploy-prod.sh <tag> <commit> <php-digest> <pwa-digest> <provisioner-digest>`.
 
 Then check that `/api/healthz` and `/api/health` answer `ok`. Migration caveats and the full
 procedure are in the [rollback runbook](runbooks/release-rollback.md).
 
-## Configure the GitHub secrets
+## Configure GitHub
 
-| Secret                    | Needed for                   | Purpose                                                        |
-|---------------------------|------------------------------|----------------------------------------------------------------|
-| `GITHUB_TOKEN`            | always (built in)            | Push images to GHCR                                            |
-| `NEXT_PUBLIC_SENTRY_DSN`  | image build                  | Client DSN inlined into the web bundle; without it, browser error capture is off |
-| `SENTRY_AUTH_TOKEN`, `SENTRY_URL`, `SENTRY_ORG`, `SENTRY_PROJECT` | source maps | Release creation and source-map upload                  |
-| `SSH_HOST`, `SSH_USER`, `SSH_KEY` | prod and previews    | SSH access to the VM as the Ansible-provisioned `deploy` user  |
-| `SSH_KNOWN_HOSTS`         | prod and previews (recommended) | Pinned host key; without it the job trusts a live `ssh-keyscan` |
-| `PROD_REPO_DIR`           | optional                     | Checkout on the VM, default `/opt/bike-trip-planner`           |
-| `PROD_HEALTH_URL`         | optional                     | Host probed by `smoke-test`, default `https://www.bike-trip-planner.com` |
-| `PREVIEW_REPO_ROOT`       | optional                     | Root of the preview checkouts, default `/opt/bike-trip-planner-previews` |
-| `PREVIEW_ENV_FILE`        | optional                     | Preview env file, default `<PREVIEW_REPO_ROOT>/preview.env`    |
-| `INCIDENT_DISPATCH_TOKEN` | smoke-test failure           | Fine-grained PAT (`Contents: write`, `Issues: write`) that raises the incident dispatch |
+A pull_request run executes the workflow file of the PR, so a branch can rewrite `deploy.yml`.
+What protects production is therefore GitHub configuration, not the workflow:
+
+- **Environment `production`**: deployment branches and tags limited to the tag pattern `v*`
+  (required reviewers optional). A pull_request run cannot read its secrets.
+- **Environment `preview`**: required reviewers (the owner). Its key can only run `btp-preview`.
+- **Tag ruleset** on `v*`: only the owner may create, update or delete release tags.
+- **No SSH, Sentry or incident secret at repository level**: a repository secret is readable by
+  any workflow a branch adds.
+
+| Secret                    | Where                  | Purpose                                                        |
+|---------------------------|------------------------|----------------------------------------------------------------|
+| `GITHUB_TOKEN`            | built in               | Push images to GHCR                                            |
+| `NEXT_PUBLIC_SENTRY_DSN`  | repository             | Client DSN inlined into the web bundle (public); without it, browser error capture is off |
+| `SENTRY_AUTH_TOKEN`, `SENTRY_URL`, `SENTRY_ORG`, `SENTRY_PROJECT` | `production` | Release creation and source-map upload |
+| `SSH_HOST`, `SSH_USER`, `SSH_KEY` | `production`   | SSH access as the `deploy` user (`deploy_ssh_public_keys`)     |
+| `SSH_HOST`, `SSH_USER`, `SSH_KEY` | `preview`      | SSH access as `preview-deploy` (`preview_deploy_ssh_public_keys`), a different key |
+| `SSH_KNOWN_HOSTS`         | both environments      | Pinned host key, required                                      |
+| `PROD_REPO_DIR`           | `production`, optional | Checkout on the VM, default `/opt/bike-trip-planner`           |
+| `PROD_HEALTH_URL`         | `production`, optional | Host probed by `smoke-test`, default `https://www.bike-trip-planner.com` |
+| `INCIDENT_DISPATCH_TOKEN` | `production`           | Fine-grained PAT (`Contents: write`, `Issues: write`) that raises the incident dispatch |
+
+The `-preview` packages are created by the first PR build and are private by default: make them
+public (or log the `preview-deploy` user in to GHCR) so the VM can pull them.
 
 ## Configure the runtime environment
 

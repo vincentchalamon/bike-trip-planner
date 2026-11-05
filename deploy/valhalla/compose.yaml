@@ -1,7 +1,7 @@
 # Shared Valhalla routing engine (serve-only) — no-Coolify shared-infra deploy.
 #
 # Deployed once on the VM by Ansible, OUTSIDE the app stacks, on the shared
-# `btp-shared` external network. Prod and every PR preview reach it as
+# `btp-shared` (prod) and `btp-shared-preview` (previews) external networks. Both reach it as
 # http://valhalla:8002 (VALHALLA_BASE_URI) instead of each bundling its own
 # ~2 GB copy. The graph is built off-VM and shipped into the `valhalla-tiles`
 # volume by `make routing-publish` (docs/runbooks/valhalla-routing-graph.md);
@@ -23,8 +23,12 @@ services:
         limits:
           memory: 3G
     networks:
+      # App stacks reach it as http://valhalla:8002 via this alias: prod over
+      # btp-shared, previews over btp-shared-preview (they never share a network).
       btp-shared:
-        # App stacks reach it as http://valhalla:8002 via this alias.
+        aliases:
+          - valhalla
+      btp-shared-preview:
         aliases:
           - valhalla
     volumes:
@@ -46,8 +50,10 @@ services:
       start_period: 20s
 
 networks:
-  # Created by Ansible; shared by prod-app, previews and this service.
+  # Created by Ansible.
   btp-shared:
+    external: true
+  btp-shared-preview:
     external: true
 
 volumes:

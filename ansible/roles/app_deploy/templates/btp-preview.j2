@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# {{ ansible_managed }}
+# Forced command of the preview deploy key ({{ preview_deploy_user }}'s
+# authorized_keys: restrict,command="/usr/local/bin/btp-preview"). That key is
+# readable by pull_request runs, so this script is the whole of what it can do:
+#   deploy <pr> <php-digest> <pwa-digest>
+#   teardown <pr>
+# The images come from the -preview packages, by digest; the compose files come
+# from {{ preview_root }}/base, a checkout of {{ preview_base_ref }}, never from
+# the PR. The PR changes what the containers run, not how they are run.
+set -euo pipefail
+
+usage() {
+  echo "usage: deploy <pr> <php-digest> <pwa-digest> | teardown <pr>" >&2
+  exit 64
+}
+
+# Split on whitespace only: `read` neither globs nor expands, and every word is
+# then matched against a strict pattern.
+read -r -a ARGS <<< "${SSH_ORIGINAL_COMMAND:-}"
+set -- "${ARGS[@]}"
+ACTION="${1:-}"
+PR="${2:-}"
+DIGEST_RE='^sha256:[0-9a-f]{64}$'
+
+[[ "${PR}" =~ ^[1-9][0-9]{0,5}$ ]] || usage
+case "${ACTION}" in
+  deploy)
+    [ "$#" -eq 4 ] || usage
+    [[ "$3" =~ ${DIGEST_RE} && "$4" =~ ${DIGEST_RE} ]] || usage
+    ;;
+  teardown)
+    [ "$#" -eq 2 ] || usage
+    ;;
+  *)
+    usage
+    ;;
+esac
+
+BASE="{{ preview_root }}/base"
+export PR_NUMBER="${PR}"
+
+compose() {
+  docker compose --env-file "{{ preview_root }}/preview.env" -p "pr-${PR}" \
+    --project-directory "${BASE}" \
+    -f "${BASE}/compose.yaml" -f "${BASE}/deploy/preview/compose.yaml" "$@"
+}
+
+# One preview operation at a time: they share the base checkout.
+exec 9> "{{ preview_root }}/.lock"
+flock 9
+
+if [ "${ACTION}" = "deploy" ]; then
+  export PHP_IMAGE="{{ php_preview_image_repo }}@$3"
+  export PWA_IMAGE="{{ pwa_preview_image_repo }}@$4"
+  git -C "${BASE}" fetch --quiet --force origin "{{ preview_base_ref }}"
+  git -C "${BASE}" checkout --quiet --force --detach FETCH_HEAD
+  compose up -d --pull always --remove-orphans
+else
+  compose down -v --remove-orphans
+fi

@@ -39,16 +39,16 @@ In the OCI console:
     - Image source: "Boot volume" → select the preserved volume
     - Subnet: same VCN as before. **No reserved public IP**: ingress is the outbound Cloudflare Tunnel, nothing to reattach.
     - Launch. The VM boots with everything already configured. Confirm `cloudflared` reconnected and `/api/healthz` is green.
-    - If the host SSH key changed, update the `SSH_KNOWN_HOSTS` GitHub secret (when set), or `deploy-prod` will refuse the host.
+    - If the host SSH key changed, update the `SSH_KNOWN_HOSTS` secret of both the `production` and `preview` environments, or the deploy jobs will refuse the host.
 
 3. **If the boot volume is also gone** (rare: full reclaim after long inactivity), **re-run the Ansible playbook** on a fresh VM:
     - Provision a fresh `VM.Standard.A1.Flex` (Ubuntu ARM64, 4 OCPU / 24 GB) with **no public IP**. On `Out of host capacity`, retry or change availability domain or region. First SSH via the OCI serial console or a temporary public IP.
     - From a workstation, in `ansible/`: `ansible-galaxy collection install -r requirements.yml`, then `ansible-playbook -i inventory.ini playbook.yml --ask-vault-pass`. This reinstalls Docker, Traefik, cloudflared, the shared Valhalla and PG-reference, the prod env file, both keypairs and the backup timer. See [`ansible/README.md`](../../ansible/README.md).
     - Seed the routing graph: `make routing-publish deploy@<vm-host> <slug> [slug...]` from a workstation that holds a built graph (see [valhalla-routing-graph.md](valhalla-routing-graph.md)), or ship the tar, set `valhalla_tiles_tar` in `group_vars/all.yml` and re-run the playbook.
-    - Deploy the app: re-run GHA `deploy-prod` for the current tag, or run `/opt/bike-trip-planner/deploy-prod.sh <tag>` on the VM. The fresh clone is on `main`, and `btp-compose` (every prod compose call) refuses to run until this step has put it on a release tag.
+    - Deploy the app: re-run GHA `deploy-prod` for the current tag. A fresh VM has no release record, so `deploy-prod.sh <tag>` alone is refused; on the VM, pass the commit and digests from that run's summary (`deploy-prod.sh <tag> <commit> <php-digest> <pwa-digest> <provisioner-digest>`). The fresh clone is on `main`, and `btp-compose` (every prod compose call) refuses to run until this step has put it on a recorded release tag.
     - Restore PG-app from the latest backup: follow the restore procedure in [ADR-062](../adr/adr-062-backup-and-disaster-recovery.md#restore-procedure) (the `age` private key is in Bitwarden, see [secrets-inventory.md](secrets-inventory.md#bootstrap-total-loss)).
     - PG-reference is not backed up: it is reproducible by re-opening each zone (see [zone-opening.md](zone-opening.md)).
-    - Update the `SSH_HOST` / `SSH_KNOWN_HOSTS` GitHub secrets if the host changed.
+    - Update the `SSH_HOST` / `SSH_KNOWN_HOSTS` secrets of both GitHub environments if the host changed.
     - Cloudflare DNS already points `www` + `*` at the tunnel CNAME (`<UUID>.cfargotunnel.com`); no DNS record to update.
 
 4. **Notify users** — use a GitHub repository issue or a pinned PWA banner once the app is back.

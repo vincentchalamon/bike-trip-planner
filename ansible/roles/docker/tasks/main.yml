@@ -61,17 +61,25 @@
 - name: Apply the daemon configuration
   ansible.builtin.meta: flush_handlers
 
-- name: Add the deploy user to the docker group
+# The docker group is root-equivalent. The preview user is in it too, but its
+# only entry point is the btp-preview forced command (common role).
+- name: Add the deploy users to the docker group
   ansible.builtin.user:
-    name: "{{ deploy_user }}"
+    name: "{{ item }}"
     groups: docker
     append: true
+  loop:
+    - "{{ deploy_user }}"
+    - "{{ preview_deploy_user }}"
 
-- name: Create the shared Docker networks (edge, btp-shared)
+- name: Create the shared Docker networks (prod and preview sides)
   community.docker.docker_network:
-    name: "{{ item }}"
+    name: "{{ item.name }}"
+    ipam_config: "{{ [{'subnet': item.subnet}] if item.subnet is defined else omit }}"
     state: present
   loop: "{{ docker_networks }}"
+  loop_control:
+    label: "{{ item.name }}"
 
 - name: Log in to GHCR (only when the images are private)
   community.docker.docker_login:

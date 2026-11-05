@@ -1,18 +1,26 @@
 # Per-PR preview overlay on top of compose.yaml (iso-prod base) — ADR-061, W3.
 #
-# Layered EXPLICITLY on the VM by the deploy-preview job (never auto-loaded), one
-# isolated stack per open PR:
-#   PR_NUMBER=<n> DOMAIN=<domain> \
-#     docker compose -p pr-<n> -f compose.yaml -f deploy/preview/compose.yaml up -d --pull always
+# Layered EXPLICITLY on the VM by btp-preview, the forced command of the preview
+# deploy key (ansible/roles/app_deploy/templates/btp-preview.j2), one isolated
+# stack per open PR:
+#   PR_NUMBER=<n> PHP_IMAGE=<repo>@<digest> PWA_IMAGE=<repo>@<digest> \
+#     docker compose --env-file preview.env -p pr-<n> -f compose.yaml -f deploy/preview/compose.yaml up -d
 # Torn down (with its volumes) by teardown-preview: docker compose -p pr-<n> down -v
+#
+# This file and compose.yaml are read from the VM's own checkout of `main`, never
+# from the PR: a PR changes the images a preview runs, not how they are run (host
+# mounts, networks, Traefik routes). A PR that changes these files therefore
+# previews with main's version of them.
 #
 # Isolation model — what a preview OWNS vs SHARES on the single 24 GB / 4-core VM:
 #  - OWNS (per stack, disposable): its own empty `database` (PG-app) + `redis`,
 #    living on the project-scoped `pr-<n>_default` network. No DataFixtures exist
 #    in the repo, so the PG-app boots empty and users sign up via magic-link.
 #  - SHARES (read-only, never per-preview): the Ansible-managed Valhalla and
-#    PG-référence on `btp-shared`. The preview bundles NO valhalla/valhalla-builder/
-#    provisioner — those stay behind their profiles (never enabled here), so the
+#    PG-référence, reached over `btp-shared-preview`. Previews never join prod's
+#    `edge` / `btp-shared`: there, `php` must only ever resolve to prod. The
+#    preview bundles NO valhalla/valhalla-builder/provisioner: those stay
+#    behind their profiles (never enabled here), so the
 #    `valhalla-tiles` volume is never mounted and thus never created for a preview.
 #    LIMIT (W2.10): a PR that changes reference (osm/tourism) DDL is NOT
 #    previewable in isolation — the shared PG-référence keeps the prod schema.
@@ -26,8 +34,8 @@
 # (prod + all previews) inside the VM.
 #
 # Only PR_NUMBER + DOMAIN (and the shared reference DB / Mercure secrets) need to
-# reach the containers; the GHA job injects PR_NUMBER/DOMAIN, the VM `.env`
-# carries the rest.
+# reach the containers; btp-preview injects PR_NUMBER and the images, the VM's
+# preview.env carries the rest.
 
 # Shared preview env for php + worker (YAML anchor to avoid duplicating the block).
 x-preview-env: &preview-env
@@ -40,9 +48,9 @@ x-preview-env: &preview-env
   # Host forwarded by Cloudflare -> Traefik is pr-<n>.${DOMAIN}; php also answers to
   # the internal `php` name (worker -> Mercure). Anything else Symfony rejects.
   TRUSTED_HOSTS: "^(pr-${PR_NUMBER}\\.${DOMAIN}|php)$$"
-  # Shared serve-only Valhalla, reached by its alias on btp-shared (deploy/valhalla).
+  # Shared serve-only Valhalla, reached by its alias on btp-shared-preview (deploy/valhalla).
   VALHALLA_BASE_URI: http://valhalla:8002
-  # Shared read-only PG-référence (osm/tourism reads, ADR-060), reached on btp-shared.
+  # Shared read-only PG-référence (osm/tourism reads, ADR-060), reached on btp-shared-preview.
   # Same default as the prod overlay; overridable wholesale from the VM `.env`.
   REFERENCE_DATABASE_URL: "${REFERENCE_DATABASE_URL:-postgresql://reference_ro:${REFERENCE_DB_PASSWORD:-}@pg-reference:5432/reference?serverVersion=18&charset=utf8}"
 
@@ -53,10 +61,11 @@ services:
     # so a host port would collide with prod and with every other preview.
     ports: !reset []
     # Merged additively onto the base `default`: php stays on pr-<n>_default (its
-    # own database/redis/pwa) and also joins edge (Traefik) + btp-shared (shared infra).
+    # own database/redis/pwa) and also joins the preview side of Traefik and of the
+    # shared infra.
     networks:
-      - edge
-      - btp-shared
+      - edge-preview
+      - btp-shared-preview
     # Strict caps so a preview cannot starve prod on the shared 4-core VM. Uses the
     # base's deploy.resources.limits style (honored by `docker compose up`), not the
     # service-level cpus/mem_limit fields — mixing the two on one service is rejected.
@@ -72,8 +81,8 @@ services:
       MERCURE_EXTRA_DIRECTIVES: "cors_origins https://pr-${PR_NUMBER}.${DOMAIN}"
     labels:
       - "traefik.enable=true"
-      # Bind the router to the edge network (php is multi-homed).
-      - "traefik.docker.network=edge"
+      # Bind the router to the preview edge network (php is multi-homed).
+      - "traefik.docker.network=edge-preview"
       # Per-PR router/service names so previews never collide with prod or each other.
       - "traefik.http.routers.pr-${PR_NUMBER}.rule=Host(`pr-${PR_NUMBER}.${DOMAIN}`)"
       # HTTP entrypoint only: no ACME on Traefik (edge TLS via Cloudflare Tunnel).
@@ -82,9 +91,9 @@ services:
 
   worker:
     # One async consumer is plenty for a preview (base runs 2 in prod).
-    # Merged onto the base `default` (database/redis) + btp-shared (Valhalla + osm reads).
+    # Merged onto the base `default` (database/redis) + btp-shared-preview (Valhalla + osm reads).
     networks:
-      - btp-shared
+      - btp-shared-preview
     deploy:
       replicas: 1
       resources:
@@ -151,10 +160,11 @@ secrets:
     file: "${PREVIEW_OAUTH_PUBLIC_KEY_PATH:?PREVIEW_OAUTH_PUBLIC_KEY_PATH must be set for preview stacks}"
 
 networks:
-  # Both created by Ansible ahead of any deploy (W5); shared with prod + every preview.
+  # Both created by Ansible ahead of any deploy (W5); shared by every preview, never
+  # by prod.
   # Traefik <-> php.
-  edge:
+  edge-preview:
     external: true
   # Shared infra (Valhalla + PG-référence).
-  btp-shared:
+  btp-shared-preview:
     external: true

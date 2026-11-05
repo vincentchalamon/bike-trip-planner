@@ -2,9 +2,10 @@
 # {{ ansible_managed }}
 # The ONLY way to run `docker compose` against the prod stack: deploy-prod.sh,
 # GHA deploy-prod, the events-refresh timer and manual provisioning all go
-# through it. The images it runs are derived from the release tag the checkout
-# sits on, so the compose files and the images can never come from two
-# different revisions. Usage: btp-compose <any docker compose arguments>
+# through it. The images it runs are the ones recorded for the release tag the
+# checkout sits on, pinned by digest: the compose files and the images can never
+# come from two different revisions, and re-pushing a tag on GHCR changes
+# nothing here. Usage: btp-compose <any docker compose arguments>
 set -euo pipefail
 
 cd "{{ app_dir }}"
@@ -18,9 +19,38 @@ if [ -z "${TAG}" ]; then
   exit 1
 fi
 
-export PHP_IMAGE="{{ php_image_repo }}:${TAG}"
-export PWA_IMAGE="{{ pwa_image_repo }}:${TAG}"
-export PROVISIONER_IMAGE="{{ provisioner_image_repo }}:${TAG}"
+# Written by deploy-prod.sh from the digests build-images pushed for that tag.
+RECORD="{{ release_records_dir }}/${TAG}"
+if [ ! -r "${RECORD}" ]; then
+  echo "btp-compose: no release record for ${TAG} (${RECORD}); deploy it from GHA deploy-prod first" >&2
+  exit 1
+fi
+
+field() {
+  local value
+  value="$(sed -n "s/^$1=//p" "${RECORD}")"
+  if ! [[ "${value}" =~ $2 ]]; then
+    echo "btp-compose: invalid '$1' in ${RECORD}" >&2
+    exit 1
+  fi
+  printf '%s' "${value}"
+}
+
+DIGEST_RE='^sha256:[0-9a-f]{64}$'
+COMMIT="$(field commit '^[0-9a-f]{40}$')"
+PHP_DIGEST="$(field php "${DIGEST_RE}")"
+PWA_DIGEST="$(field pwa "${DIGEST_RE}")"
+PROVISIONER_DIGEST="$(field provisioner "${DIGEST_RE}")"
+
+# A moved tag would put compose files from another commit next to the recorded images.
+if [ "$(git rev-parse HEAD)" != "${COMMIT}" ]; then
+  echo "btp-compose: ${TAG} now points at $(git rev-parse HEAD), recorded at ${COMMIT}; refusing to run" >&2
+  exit 1
+fi
+
+export PHP_IMAGE="{{ php_image_repo }}@${PHP_DIGEST}"
+export PWA_IMAGE="{{ pwa_image_repo }}@${PWA_DIGEST}"
+export PROVISIONER_IMAGE="{{ provisioner_image_repo }}@${PROVISIONER_DIGEST}"
 
 # --env-file: the prod env file lives outside app_dir (a tag checkout would
 # overwrite it) and replaces the repo's versioned `.env`, which only holds dev

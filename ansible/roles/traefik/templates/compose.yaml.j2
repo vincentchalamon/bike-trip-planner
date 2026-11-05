@@ -8,8 +8,10 @@ services:
     restart: unless-stopped
     command:
       - --configFile=/etc/traefik/traefik.yml
+    # Both edge sides: prod php is on `edge`, preview php on `edge-preview`.
     networks:
       - edge
+      - edge-preview
     volumes:
       # Traefik's Docker provider needs the socket to read container labels.
       # `:ro` does NOT restrict the Docker API — a read-only socket mount still
@@ -22,4 +24,6 @@ services:
 
 networks:
   edge:
+    external: true
+  edge-preview:
     external: true

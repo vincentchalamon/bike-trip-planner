@@ -35,7 +35,7 @@ The full inventory, with the Vault key of each secret, is in
 | `FCM_SERVICE_ACCOUNT_JSON` | On-compromise | Same. |
 | `SENTRY_DSN` / `SENTRY_AUTH_TOKEN` | On-compromise | The error-tracking project can be recreated. |
 | Cloudflare Tunnel credentials | On-compromise | Recreate the tunnel credentials, update Vault, re-run the playbook. |
-| `SSH_KEY` / `SSH_KNOWN_HOSTS` | On-compromise (key) / on VM host-key change | Deploy SSH key, only exposed to the `deploy.yml` jobs. New pair, public key into `deploy_ssh_public_keys`, re-run the playbook. |
+| `SSH_KEY` / `SSH_KNOWN_HOSTS` | On-compromise (key) / on VM host-key change | Two keys, both environment secrets (never repository secrets, which any workflow a branch adds can read). The `production` one (tag-only environment, `deploy` user) is out of reach of pull_request runs. The `preview` one is reachable by them by design, and is pinned to the `btp-preview` forced command. New pair, public key into `deploy_ssh_public_keys` or `preview_deploy_ssh_public_keys`, re-run the playbook; the preview list is exclusive, so a key dropped from it is revoked. |
 | `INCIDENT_DISPATCH_TOKEN` | **90 days** | Fine-grained PAT, see [incident-alerting.md](incident-alerting.md) ("Rotating `INCIDENT_DISPATCH_TOKEN`"). |
 | `CLAUDE_CODE_OAUTH_TOKEN` | Managed by Anthropic | Out of scope. |
 

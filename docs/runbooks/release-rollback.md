@@ -38,9 +38,13 @@ Check the Sentry releases page: confirm the new release is associated with the s
     /opt/bike-trip-planner/deploy-prod.sh <previous-tag>
     ```
 
-    Both check out the tag and roll the stack through `btp-compose`, which derives
-    `PHP_IMAGE` / `PWA_IMAGE` / `PROVISIONER_IMAGE` from the tag the checkout is on: the
-    images always belong to the release whose compose files run them.
+    Both check out the tag and roll the stack through `btp-compose`, which runs the
+    `PHP_IMAGE` / `PWA_IMAGE` / `PROVISIONER_IMAGE` digests recorded for that tag in
+    `/etc/bike-trip-planner/releases/<tag>` by its first deploy: the images always belong to
+    the release whose compose files run them, even if the tag was re-pushed on GHCR since. On a
+    VM rebuilt after that deploy there is no record: re-run the tag's `deploy-prod` job, or pass
+    the commit and digests listed in that run's summary
+    (`deploy-prod.sh <tag> <commit> <php-digest> <pwa-digest> <provisioner-digest>`).
 
 2. **Verify the smoke test**:
 

@@ -1,14 +1,52 @@
 #!/usr/bin/env bash
 # {{ ansible_managed }}
-# Prod deploy hook, and the rollback procedure: `deploy-prod.sh <previous tag>`.
-# Does what GHA `deploy-prod` runs over SSH. Checking out the tag is what selects
-# the release: btp-compose derives the image tags from it.
+# Prod deploy hook, called by GHA deploy-prod as
+#   deploy-prod.sh <tag> <commit> <php-digest> <pwa-digest> <provisioner-digest>
+# and the rollback procedure: `deploy-prod.sh <previous tag>` (reuses that tag's
+# record). The first deploy of a tag records its commit and image digests in
+# {{ release_records_dir }}/<tag>; a later call with a different set for the
+# same tag is refused, so a re-pushed tag or image never reaches prod.
+# btp-compose then runs the images of that record.
 set -euo pipefail
 
-cd "{{ app_dir }}"
-TAG="${1:?usage: deploy-prod.sh <tag>}"
+usage() {
+  echo "usage: deploy-prod.sh <tag> [<commit> <php-digest> <pwa-digest> <provisioner-digest>]" >&2
+  exit 64
+}
 
+TAG="${1:-}"
+[[ "${TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || usage
+RECORD="{{ release_records_dir }}/${TAG}"
+
+if [ "$#" -eq 5 ]; then
+  DIGEST_RE='^sha256:[0-9a-f]{64}$'
+  [[ "$2" =~ ^[0-9a-f]{40}$ && "$3" =~ ${DIGEST_RE} && "$4" =~ ${DIGEST_RE} && "$5" =~ ${DIGEST_RE} ]] || usage
+  WANTED="$(printf 'commit=%s\nphp=%s\npwa=%s\nprovisioner=%s' "$2" "$3" "$4" "$5")"
+  if [ -e "${RECORD}" ]; then
+    if [ "$(cat "${RECORD}")" != "${WANTED}" ]; then
+      echo "deploy-prod.sh: ${TAG} is already recorded with another commit or digest set; refusing to re-pin a release" >&2
+      exit 1
+    fi
+  else
+    printf '%s\n' "${WANTED}" > "${RECORD}.tmp"
+    mv "${RECORD}.tmp" "${RECORD}"
+  fi
+elif [ "$#" -ne 1 ]; then
+  usage
+elif [ ! -e "${RECORD}" ]; then
+  echo "deploy-prod.sh: no release record for ${TAG}; re-run its GHA deploy-prod job, or pass the commit and digests from that run's summary" >&2
+  exit 1
+fi
+
+COMMIT="$(sed -n 's/^commit=//p' "${RECORD}")"
+
+cd "{{ app_dir }}"
 git fetch --tags --prune --force
+# Checked before the checkout, so a moved tag leaves the running release alone.
+if [ "$(git rev-parse "refs/tags/${TAG}^{commit}")" != "${COMMIT}" ]; then
+  echo "deploy-prod.sh: ${TAG} no longer points at the recorded commit ${COMMIT}; refusing to deploy" >&2
+  exit 1
+fi
 git checkout --force "refs/tags/${TAG}"
 
 /usr/local/bin/btp-compose pull
