@@ -13,9 +13,13 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, closed]
 
+# Read-only by default; only build-images gets packages: write. Prod secrets
+# (SSH, Sentry, incident PAT) live in the `production` environment, restricted to
+# `v*` tags, so a pull_request run cannot read them even with an edited workflow.
+# Preview SSH secrets live in the `preview` environment, and that key can only run
+# the VM's forced command (btp-preview), never a shell.
 permissions:
   contents: read
-  packages: write
 
 concurrency:
   group: deploy-${{ github.ref }}
@@ -39,6 +43,15 @@ jobs:
       github.event.action != 'closed' &&
       (github.event_name != 'pull_request' ||
        github.event.pull_request.head.repo.full_name == github.repository)
+    permissions:
+      contents: read
+      packages: write
+    # One output per service (each matrix leg sets only its own key), consumed by
+    # deploy-prod / deploy-preview to deploy by digest rather than by mutable tag.
+    outputs:
+      php_digest: ${{ steps.digest.outputs.php }}
+      pwa_digest: ${{ steps.digest.outputs.pwa }}
+      provisioner_digest: ${{ steps.digest.outputs.provisioner }}
     strategy:
       fail-fast: false
       matrix:
@@ -76,21 +89,29 @@ jobs:
           PR_NUMBER: ${{ github.event.number }}
           SHA: ${{ github.sha }}
           SERVICE: ${{ matrix.service }}
+        # Release images and PR images live in DIFFERENT packages: a PR run only
+        # ever pushes `<service>-preview:pr-<n>`, never into the release package.
         run: |
-          IMAGE="${REGISTRY}/${IMAGE_OWNER}-${SERVICE}"
-          TAGS="${IMAGE}:${SHA}"
           if [ "${REF_TYPE}" = "tag" ]; then
-            TAGS="${TAGS},${IMAGE}:${REF_NAME}"
+            PACKAGE="bike-trip-planner-${SERVICE}"
+            IMAGE="${REGISTRY}/${IMAGE_OWNER}-${SERVICE}"
+            TAGS="${IMAGE}:${SHA},${IMAGE}:${REF_NAME}"
           elif [ "${EVENT_NAME}" = "pull_request" ]; then
-            # Preview stacks (W3) pull this by the deterministic pr-<n> tag.
-            TAGS="${TAGS},${IMAGE}:pr-${PR_NUMBER}"
+            PACKAGE="bike-trip-planner-${SERVICE}-preview"
+            IMAGE="${REGISTRY}/${IMAGE_OWNER}-${SERVICE}-preview"
+            TAGS="${IMAGE}:pr-${PR_NUMBER}"
+          else
+            echo "Unexpected event ${EVENT_NAME} (${REF_TYPE})" >&2
+            exit 1
           fi
           {
             echo "tags=${TAGS}"
             echo "image=${IMAGE}"
+            echo "package=${PACKAGE}"
           } >> "$GITHUB_OUTPUT"
 
       - name: Build and push
+        id: build
         uses: docker/build-push-action@v7
         with:
           context: .
@@ -113,16 +134,31 @@ jobs:
           cache-to: type=gha,scope=${{ matrix.service }},mode=max
           provenance: false
 
+      # provenance: false -> a single-platform manifest, so this digest is what
+      # `docker pull <image>@<digest>` resolves on the VM.
+      - name: Record image digest
+        id: digest
+        env:
+          SERVICE: ${{ matrix.service }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+          IMAGE: ${{ steps.tags.outputs.image }}
+        run: |
+          if ! [[ "${DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "Unexpected digest '${DIGEST}' for ${SERVICE}" >&2
+            exit 1
+          fi
+          echo "${SERVICE}=${DIGEST}" >> "$GITHUB_OUTPUT"
+          echo "- \`${IMAGE}@${DIGEST}\`" >> "$GITHUB_STEP_SUMMARY"
+
       # Keep the registry tidy: retain the 10 most recent versions of each
       # image (enough rollback targets) and prune the rest. GHCR storage is
       # free for this public repo, so this is hygiene, not a cost control.
-      # ignore-versions protects the vX.Y.Z release images from PR-build churn:
-      # deploy-prod's rollback story ("re-run on an earlier tag") needs them to
-      # survive even after >10 pr-<n>/sha builds between two releases.
+      # ignore-versions keeps every vX.Y.Z release image: rollback redeploys an
+      # earlier tag by its recorded digest, which must still exist on GHCR.
       - name: Prune old image versions
         uses: actions/delete-package-versions@v5
         with:
-          package-name: bike-trip-planner-${{ matrix.service }}
+          package-name: ${{ steps.tags.outputs.package }}
           package-type: container
           min-versions-to-keep: 10
           ignore-versions: '^v[0-9]+\.[0-9]+\.[0-9]+$'
@@ -133,8 +169,11 @@ jobs:
     needs: build-images
     # Source maps track a released bundle only — skip on PR builds.
     if: github.ref_type == 'tag'
+    # SENTRY_* are `production` environment secrets (tag-only).
+    environment: production
+    # SENTRY_AUTH_TOKEN is NOT job-wide: only the gate and the build step see it,
+    # so `npm ci` (dependency install scripts) runs without it.
     env:
-      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
       SENTRY_URL: ${{ secrets.SENTRY_URL }}
       SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
       SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
@@ -145,6 +184,8 @@ jobs:
 
       - name: Skip when Sentry/GlitchTip is not configured
         id: gate
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: |
           if [ -z "${SENTRY_AUTH_TOKEN}" ] || [ -z "${SENTRY_URL}" ] || [ -z "${SENTRY_ORG}" ] || [ -z "${SENTRY_PROJECT}" ]; then
             echo "Sentry/GlitchTip secrets missing — skipping source map upload."
@@ -170,7 +211,7 @@ jobs:
         if: steps.gate.outputs.skip != 'true'
         working-directory: pwa
         # withSentryConfig creates the release and uploads the source maps during
-        # the build itself (all four SENTRY_* vars are present in this job's env),
+        # the build itself (all four SENTRY_* vars are present in this step's env),
         # then deletes the .map files (deleteSourcemapsAfterUpload). A separate
         # `@sentry/cli releases files upload-sourcemaps` step would find nothing —
         # so it is intentionally omitted; the plugin owns the upload.
@@ -180,6 +221,7 @@ jobs:
         # chunk hashes, so the uploaded maps would no longer match the deployed
         # bundle and symbolication would silently fail.
         env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           NEXT_PUBLIC_APP_RELEASE: ${{ github.sha }}
           NEXT_PUBLIC_APP_ENV: production
           NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
@@ -192,65 +234,71 @@ jobs:
     # the Oracle VM and is most likely degraded during a heavy deploy, so a
     # transient @sentry/cli failure must not block shipping the new images.
     needs: build-images
-    # Prod = version tags only. Rollback = re-run this job on an earlier tag.
+    # Prod = version tags only. Rollback = re-run this job on an earlier tag (a
+    # re-run reuses build-images' recorded digests), or deploy-prod.sh on the VM.
     if: github.ref_type == 'tag'
+    # The prod SSH secrets are `production` environment secrets, whose deployment
+    # policy only admits `v*` tags: no pull_request run can read them.
+    environment: production
     env:
       SSH_HOST: ${{ secrets.SSH_HOST }}
       SSH_USER: ${{ secrets.SSH_USER }}
       SSH_KEY: ${{ secrets.SSH_KEY }}
-      # Pinned host key (optional). When set, it is trusted instead of scanning
-      # the host live (TOFU). Populate once W5 (Ansible/SSH infra) is in place.
+      # Pinned host key. Mandatory: there is no ssh-keyscan (TOFU) fallback.
       SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
       # Repo checkout path on the VM (Ansible-provisioned). Defaults if unset.
       REPO_DIR: ${{ secrets.PROD_REPO_DIR }}
       TAG: ${{ github.ref_name }}
+      COMMIT: ${{ github.sha }}
+      PHP_DIGEST: ${{ needs.build-images.outputs.php_digest }}
+      PWA_DIGEST: ${{ needs.build-images.outputs.pwa_digest }}
+      PROVISIONER_DIGEST: ${{ needs.build-images.outputs.provisioner_digest }}
     steps:
       - name: Deploy over SSH
         # No-op when SSH secrets are absent — same transition-safety contract as
         # the former Coolify webhook. Until the Ansible/SSH infra is in place, a
-        # tag push builds+pushes images and this job cleanly skips the deploy, so
-        # merging to main (and the old Coolify prod) is never disturbed. Cutover
-        # is the first `v*` tag after the SSH secrets exist.
+        # tag push builds+pushes images and this job cleanly skips the deploy.
         run: |
           if [ -z "${SSH_HOST}" ] || [ -z "${SSH_USER}" ] || [ -z "${SSH_KEY}" ]; then
             echo "SSH_HOST/SSH_USER/SSH_KEY not configured - skipping prod deploy."
             exit 0
           fi
+          if [ -z "${SSH_KNOWN_HOSTS}" ]; then
+            echo "SSH_KNOWN_HOSTS is not set: refusing to trust the VM host key on first use." >&2
+            exit 1
+          fi
           repo_dir="${REPO_DIR:-/opt/bike-trip-planner}"
-          # TAG is github.ref_name (the pushed tag). It is expanded on the runner
-          # and re-parsed by the remote bash, so reject anything that isn't a plain
-          # vMAJOR.MINOR.PATCH tag before it is ever interpolated — git tag names
-          # may contain $(), backticks, etc., which would otherwise be RCE.
+          # Every value below is re-parsed by the remote shell, so each one must
+          # match a strict pattern before it is interpolated (a git tag name may
+          # contain $(), backticks, etc.).
           if ! [[ "${TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "Refusing to deploy: TAG '${TAG}' is not a plain version tag" >&2
+            exit 1
+          fi
+          if ! [[ "${COMMIT}" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Refusing to deploy: unexpected commit '${COMMIT}'" >&2
+            exit 1
+          fi
+          for digest in "${PHP_DIGEST}" "${PWA_DIGEST}" "${PROVISIONER_DIGEST}"; do
+            if ! [[ "${digest}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+              echo "Refusing to deploy: unexpected image digest '${digest}'" >&2
+              exit 1
+            fi
+          done
+          if ! [[ "${repo_dir}" =~ ^/[A-Za-z0-9._/-]+$ ]]; then
+            echo "Refusing to deploy: unexpected PROD_REPO_DIR '${repo_dir}'" >&2
             exit 1
           fi
           install -d -m 700 ~/.ssh
           printf '%s\n' "${SSH_KEY}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          # Prefer a pinned host key (SSH_KNOWN_HOSTS secret) over TOFU: written
-          # straight to known_hosts, it forbids the MITM window a live scan leaves
-          # open on first contact. Falls back to ssh-keyscan when unset (beta
-          # tradeoff, documented) — populate the secret once W5 (Ansible) lands.
-          if [ -n "${SSH_KNOWN_HOSTS}" ]; then
-            printf '%s\n' "${SSH_KNOWN_HOSTS}" > ~/.ssh/known_hosts
-          else
-            ssh-keyscan -H "${SSH_HOST}" >> ~/.ssh/known_hosts 2>/dev/null
-          fi
-          # Check out the tag on the VM and roll the stack, pulling the images
-          # this run just pushed by tag (--pull always). $repo_dir/$TAG expand on
-          # the runner; the remote shell receives a fully-resolved script.
-          # btp-compose (Ansible-rendered, /usr/local/bin) derives PHP_IMAGE /
-          # PWA_IMAGE / PROVISIONER_IMAGE from the tag just checked out, and
-          # passes the prod env file Ansible renders OUTSIDE the checkout, which
-          # `git checkout --force` would otherwise clobber with the repo's
-          # versioned `.env` (dev defaults).
-          ssh -i ~/.ssh/deploy_key "${SSH_USER}@${SSH_HOST}" bash -euo pipefail <<EOF
-          cd "${repo_dir}"
-          git fetch --tags --force
-          git checkout --force "refs/tags/${TAG}"
-          /usr/local/bin/btp-compose up -d --pull always
-          EOF
+          printf '%s\n' "${SSH_KNOWN_HOSTS}" > ~/.ssh/known_hosts
+          # deploy-prod.sh (Ansible-rendered) records the tag -> commit + image
+          # digests on first deploy and refuses a different set for a tag it has
+          # already recorded; it then checks out the tag and rolls the stack
+          # through btp-compose, which runs the images by those digests.
+          ssh -o StrictHostKeyChecking=yes -i ~/.ssh/deploy_key "${SSH_USER}@${SSH_HOST}" \
+            "${repo_dir}/deploy-prod.sh" "${TAG}" "${COMMIT}" "${PHP_DIGEST}" "${PWA_DIGEST}" "${PROVISIONER_DIGEST}"
 
   smoke-test:
     name: Smoke test post-deploy
@@ -259,6 +307,8 @@ jobs:
     # A tag-skipped deploy-prod counts as "success" for needs, so pin to tags:
     # never probe real prod (nor dispatch an incident) on a PR build.
     if: success() && github.ref_type == 'tag'
+    # INCIDENT_DISPATCH_TOKEN / PROD_HEALTH_URL are `production` environment secrets.
+    environment: production
     # Prod host to probe. Override PROD_HEALTH_URL only to probe another host.
     env:
       HEALTH_URL: ${{ secrets.PROD_HEALTH_URL || 'https://www.bike-trip-planner.com' }}
@@ -324,101 +374,71 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-images
     # Same-repo PRs only (a fork must never reach the VM), and never on `closed`
-    # (that action is teardown-preview's). deploy-preview shares the shared Valhalla
-    # + PG-référence on btp-shared with prod; each PR gets its own isolated PG-app +
-    # redis and its own pr-<n>.${DOMAIN} host.
+    # (that action is teardown-preview's).
+    #
+    # What the PR controls is its images, nothing else. The SSH key in the
+    # `preview` environment belongs to a dedicated VM user whose authorized_keys
+    # entry forces `btp-preview` (Ansible, app_deploy role): it accepts only
+    # `deploy <pr> <php-digest> <pwa-digest>` / `teardown <pr>`, pulls the images
+    # from the -preview packages by digest, and runs the compose files of the
+    # VM's own `main` checkout. Nothing from the PR checkout is ever executed on
+    # the host, and previews sit on their own networks (edge-preview,
+    # btp-shared-preview), never on prod's.
     #
     # OPERATIONAL GUARD — concurrent-preview cap. Each preview budgets ~2 GB / ~2
     # vCPU (deploy/preview/compose.yaml caps). On the shared 24 GB / 4-core VM, prod
     # (~6-7 GB) leaves room for roughly 4-5 concurrent previews before contention.
     # There is no auto-eviction here: keep the count in check by closing stale PRs
-    # (teardown-preview reclaims on close) and, if needed, cap open previews via
-    # branch-protection / a manual review gate. Raising the cap means shrinking the
-    # per-preview limits or growing the VM.
+    # (teardown-preview reclaims on close) and with the `preview` environment's
+    # required reviewers. Raising the cap means shrinking the per-preview limits or
+    # growing the VM.
     if: >-
       github.event_name == 'pull_request' &&
       github.event.action != 'closed' &&
       github.event.pull_request.head.repo.full_name == github.repository
+    environment: preview
     env:
       SSH_HOST: ${{ secrets.SSH_HOST }}
       SSH_USER: ${{ secrets.SSH_USER }}
       SSH_KEY: ${{ secrets.SSH_KEY }}
-      # Pinned host key (optional), same secret as deploy-prod — the VM is the same
-      # SSH_HOST. Trusted instead of a live TOFU scan when set.
+      # Pinned host key. Mandatory: there is no ssh-keyscan (TOFU) fallback.
       SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
-      REPO_DIR: ${{ secrets.PROD_REPO_DIR }}
-      # Root for the per-PR checkouts, kept OUTSIDE the prod canonical dir so a
-      # preview deploy never shares a working tree / .git index with prod.
-      PREVIEW_ROOT: ${{ secrets.PREVIEW_REPO_ROOT }}
-      # Dedicated NON-PROD env file for previews (see the deploy step). Never the
-      # prod .env — previews must not inherit prod secrets.
-      PREVIEW_ENV_FILE: ${{ secrets.PREVIEW_ENV_FILE }}
       PR_NUMBER: ${{ github.event.number }}
-      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      PHP_DIGEST: ${{ needs.build-images.outputs.php_digest }}
+      PWA_DIGEST: ${{ needs.build-images.outputs.pwa_digest }}
     steps:
       - name: Deploy preview over SSH
         # No-op when SSH secrets are absent — same transition-safety contract as
-        # deploy-prod. Until the Ansible/SSH infra is in place, a PR builds+pushes
-        # its pr-<n> images and this job cleanly skips, so merges to main (and the
-        # old Coolify prod) are never disturbed.
+        # deploy-prod.
         run: |
           if [ -z "${SSH_HOST}" ] || [ -z "${SSH_USER}" ] || [ -z "${SSH_KEY}" ]; then
             echo "SSH_HOST/SSH_USER/SSH_KEY not configured - skipping preview deploy."
             exit 0
           fi
-          canonical_dir="${REPO_DIR:-/opt/bike-trip-planner}"
-          # Dedicated checkout per PR, distinct from prod and from every other
-          # preview: concurrent preview/prod deploys never race on one working tree.
-          preview_dir="${PREVIEW_ROOT:-/opt/bike-trip-planner-previews}/pr-${PR_NUMBER}"
-          # NON-PROD env file for previews. MUST NOT be the prod .env: compose.yaml
-          # interpolates MAILER_DSN / REFRESH_TOKEN_ENC_KEY / ACCESS_REQUEST_HMAC_SECRET
-          # / FCM_SERVICE_ACCOUNT_JSON / JWT_* / DB creds from it, and an ephemeral PR
-          # preview must never inherit prod secrets.
-          # TODO(PR-I / Ansible): provision this preview.env on the VM with
-          #   preview-scoped, NON-PROD values — a dedicated Mercure key, dedicated
-          #   REFRESH_TOKEN_ENC_KEY + ACCESS_REQUEST_HMAC_SECRET + APP_SECRET, a null/sink MAILER_DSN,
-          #   empty FCM_SERVICE_ACCOUNT_JSON, the isolated preview PG-app creds, and the
-          #   dedicated preview JWT keypair paths (PREVIEW_JWT_PRIVATE_KEY_PATH /
-          #   PREVIEW_JWT_PUBLIC_KEY_PATH — distinct from prod, see deploy/preview
-          #   secrets override), a dedicated preview OAuth keypair
-          #   (PREVIEW_OAUTH_PRIVATE_KEY_PATH / PREVIEW_OAUTH_PUBLIC_KEY_PATH — distinct
-          #   from prod AND from the preview JWT pair, ADR-079) with its
-          #   OAUTH_PASSPHRASE and OAUTH_ENCRYPTION_KEY — plus the shared read-only values
-          #   (REFERENCE_DATABASE_URL, VALHALLA_BASE_URI, DOMAIN). Defaults to a single
-          #   shared file at the previews root (outside
-          #   any pr-<n> dir, so teardown's rm -rf never deletes it); until it exists
-          #   the deploy fails closed on the missing file rather than leak prod secrets.
-          preview_env_file="${PREVIEW_ENV_FILE:-${PREVIEW_ROOT:-/opt/bike-trip-planner-previews}/preview.env}"
-          # Pull the pr-<n> images this run's build-images just pushed to GHCR.
-          php_image="${REGISTRY}/${IMAGE_OWNER}-php:pr-${PR_NUMBER}"
-          pwa_image="${REGISTRY}/${IMAGE_OWNER}-pwa:pr-${PR_NUMBER}"
+          if [ -z "${SSH_KNOWN_HOSTS}" ]; then
+            echo "SSH_KNOWN_HOSTS is not set: refusing to trust the VM host key on first use." >&2
+            exit 1
+          fi
+          # btp-preview validates these again on the VM; checking here gives a
+          # readable failure in the job log.
+          if ! [[ "${PR_NUMBER}" =~ ^[1-9][0-9]{0,5}$ ]]; then
+            echo "Unexpected PR number '${PR_NUMBER}'" >&2
+            exit 1
+          fi
+          for digest in "${PHP_DIGEST}" "${PWA_DIGEST}"; do
+            if ! [[ "${digest}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+              echo "Unexpected image digest '${digest}'" >&2
+              exit 1
+            fi
+          done
           install -d -m 700 ~/.ssh
           printf '%s\n' "${SSH_KEY}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          # Prefer the pinned host key (SSH_KNOWN_HOSTS) over a live TOFU scan — same
-          # pattern as deploy-prod. Falls back to ssh-keyscan when unset (beta).
-          if [ -n "${SSH_KNOWN_HOSTS}" ]; then
-            printf '%s\n' "${SSH_KNOWN_HOSTS}" > ~/.ssh/known_hosts
-          else
-            ssh-keyscan -H "${SSH_HOST}" >> ~/.ssh/known_hosts 2>/dev/null
-          fi
-          # First deploy clones the PR's own checkout (independent .git, seeded from
-          # the canonical clone's origin remote); later deploys just fetch+checkout in
-          # it. PR_NUMBER + image tags are injected on the compose line; DOMAIN and the
-          # preview-scoped secrets come from the NON-PROD preview env file (never the
-          # prod .env). Public migrations run at container boot (MIGRATIONS_ON_BOOT).
-          ssh -i ~/.ssh/deploy_key "${SSH_USER}@${SSH_HOST}" bash -euo pipefail <<EOF
-          if [ ! -d "${preview_dir}/.git" ]; then
-            mkdir -p "\$(dirname "${preview_dir}")"
-            git clone "\$(git -C "${canonical_dir}" remote get-url origin)" "${preview_dir}"
-          fi
-          cd "${preview_dir}"
-          git fetch origin --force
-          git checkout --force "${HEAD_SHA}"
-          PR_NUMBER="${PR_NUMBER}" PHP_IMAGE="${php_image}" PWA_IMAGE="${pwa_image}" \
-            docker compose --env-file "${preview_env_file}" -p "pr-${PR_NUMBER}" \
-              -f compose.yaml -f deploy/preview/compose.yaml up -d --pull always
-          EOF
+          printf '%s\n' "${SSH_KNOWN_HOSTS}" > ~/.ssh/known_hosts
+          # The remote command is only read by the forced command, as
+          # SSH_ORIGINAL_COMMAND; the key cannot open a shell.
+          ssh -o StrictHostKeyChecking=yes -i ~/.ssh/deploy_key "${SSH_USER}@${SSH_HOST}" \
+            deploy "${PR_NUMBER}" "${PHP_DIGEST}" "${PWA_DIGEST}"
 
   teardown-preview:
     name: Tear down PR preview on the VM over SSH
@@ -429,15 +449,12 @@ jobs:
       github.event_name == 'pull_request' &&
       github.event.action == 'closed' &&
       github.event.pull_request.head.repo.full_name == github.repository
+    environment: preview
     env:
       SSH_HOST: ${{ secrets.SSH_HOST }}
       SSH_USER: ${{ secrets.SSH_USER }}
       SSH_KEY: ${{ secrets.SSH_KEY }}
-      # Pinned host key (optional), same secret as deploy-prod / deploy-preview.
       SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
-      REPO_DIR: ${{ secrets.PROD_REPO_DIR }}
-      PREVIEW_ROOT: ${{ secrets.PREVIEW_REPO_ROOT }}
-      PREVIEW_ENV_FILE: ${{ secrets.PREVIEW_ENV_FILE }}
       PR_NUMBER: ${{ github.event.number }}
     steps:
       - name: Tear down preview over SSH
@@ -447,29 +464,19 @@ jobs:
             echo "SSH_HOST/SSH_USER/SSH_KEY not configured - skipping preview teardown."
             exit 0
           fi
-          preview_dir="${PREVIEW_ROOT:-/opt/bike-trip-planner-previews}/pr-${PR_NUMBER}"
-          # Same NON-PROD preview env file as the deploy — never the prod .env.
-          preview_env_file="${PREVIEW_ENV_FILE:-${PREVIEW_ROOT:-/opt/bike-trip-planner-previews}/preview.env}"
+          if [ -z "${SSH_KNOWN_HOSTS}" ]; then
+            echo "SSH_KNOWN_HOSTS is not set: refusing to trust the VM host key on first use." >&2
+            exit 1
+          fi
+          if ! [[ "${PR_NUMBER}" =~ ^[1-9][0-9]{0,5}$ ]]; then
+            echo "Unexpected PR number '${PR_NUMBER}'" >&2
+            exit 1
+          fi
           install -d -m 700 ~/.ssh
           printf '%s\n' "${SSH_KEY}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          # Prefer the pinned host key (SSH_KNOWN_HOSTS) over a live TOFU scan — same
-          # pattern as deploy-prod. Falls back to ssh-keyscan when unset (beta).
-          if [ -n "${SSH_KNOWN_HOSTS}" ]; then
-            printf '%s\n' "${SSH_KNOWN_HOSTS}" > ~/.ssh/known_hosts
-          else
-            ssh-keyscan -H "${SSH_HOST}" >> ~/.ssh/known_hosts 2>/dev/null
-          fi
-          # Tear the pr-<n> stack down from its own checkout, then remove that
-          # checkout dir. `down -v` drops the isolated PG-app + redis volumes (no data
-          # to keep); --remove-orphans in case a service was renamed between deploys.
-          # `|| true` so a stack already gone (deploy never ran) still reclaims the dir.
-          ssh -i ~/.ssh/deploy_key "${SSH_USER}@${SSH_HOST}" bash -euo pipefail <<EOF
-          if [ -d "${preview_dir}/.git" ]; then
-            cd "${preview_dir}"
-            PR_NUMBER="${PR_NUMBER}" \
-              docker compose --env-file "${preview_env_file}" -p "pr-${PR_NUMBER}" \
-                -f compose.yaml -f deploy/preview/compose.yaml down -v --remove-orphans || true
-          fi
-          rm -rf "${preview_dir}"
-          EOF
+          printf '%s\n' "${SSH_KNOWN_HOSTS}" > ~/.ssh/known_hosts
+          # btp-preview runs `docker compose -p pr-<n> down -v` (drops the isolated
+          # PG-app + redis volumes) and succeeds when the stack is already gone.
+          ssh -o StrictHostKeyChecking=yes -i ~/.ssh/deploy_key "${SSH_USER}@${SSH_HOST}" \
+            teardown "${PR_NUMBER}"

@@ -35,6 +35,34 @@
   loop: "{{ deploy_ssh_public_keys }}"
   when: deploy_ssh_public_keys | length > 0
 
+- name: Create the preview deploy user
+  ansible.builtin.user:
+    name: "{{ preview_deploy_user }}"
+    shell: /bin/bash
+    create_home: true
+    state: present
+
+- name: Refuse a preview deploy key that is also a prod deploy key
+  ansible.builtin.assert:
+    that:
+      - preview_deploy_ssh_public_keys | intersect(deploy_ssh_public_keys) | length == 0
+    fail_msg: >-
+      preview_deploy_ssh_public_keys must not contain a key from deploy_ssh_public_keys:
+      the preview key is readable by pull_request runs, the prod one must not be.
+    quiet: true
+
+# exclusive + every key in one call: a key removed from the list is revoked.
+# `restrict` drops pty/forwarding; command= ignores whatever the client asks to
+# run and hands it to btp-preview as SSH_ORIGINAL_COMMAND.
+- name: Install the preview deploy authorized_keys (forced command)
+  ansible.posix.authorized_key:
+    user: "{{ preview_deploy_user }}"
+    key: "{{ preview_deploy_ssh_public_keys | join('\n') }}"
+    key_options: 'restrict,command="/usr/local/bin/btp-preview"'
+    state: present
+    exclusive: true
+  when: preview_deploy_ssh_public_keys | length > 0
+
 - name: Create the secrets root directory
   ansible.builtin.file:
     path: "{{ etc_dir }}"

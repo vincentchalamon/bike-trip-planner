@@ -97,6 +97,16 @@
     mode: "0640"
   no_log: true
 
+# Written by deploy-prod.sh (as the deploy user), read by btp-compose. Not in
+# app_dir: a forced checkout must not touch it.
+- name: Create the release records directory
+  ansible.builtin.file:
+    path: "{{ release_records_dir }}"
+    state: directory
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+    mode: "0750"
+
 - name: Install the prod compose wrapper (btp-compose)
   ansible.builtin.template:
     src: btp-compose.j2
@@ -111,6 +121,39 @@
     dest: "{{ app_dir }}/deploy-prod.sh"
     owner: "{{ deploy_user }}"
     group: "{{ deploy_user }}"
+    mode: "0755"
+
+# --- PR previews ---------------------------------------------------------------
+# The preview user owns its root and the `base` checkout; it can read neither
+# app.env, the prod keypairs nor the prod checkout. preview.env and the preview
+# keypairs it names are not provisioned here yet: put them under preview_root,
+# readable by the preview user (root:{{ preview_deploy_user }} 0640).
+- name: Create the preview root
+  ansible.builtin.file:
+    path: "{{ preview_root }}"
+    state: directory
+    owner: "{{ preview_deploy_user }}"
+    group: "{{ preview_deploy_user }}"
+    mode: "0750"
+
+# The compose files every preview runs. btp-preview moves it to the tip of
+# preview_base_ref on each deploy; Ansible only clones it once.
+- name: Clone the preview base checkout (first run only)
+  become: true
+  become_user: "{{ preview_deploy_user }}"
+  ansible.builtin.git:
+    repo: "{{ app_repo_url }}"
+    dest: "{{ preview_root }}/base"
+    version: "{{ preview_base_ref }}"
+    update: false
+
+# Root-owned: the preview user runs it, cannot change it.
+- name: Install the preview forced command (btp-preview)
+  ansible.builtin.template:
+    src: btp-preview.j2
+    dest: /usr/local/bin/btp-preview
+    owner: root
+    group: root
     mode: "0755"
 
 # --- events-refresh timer (optional in beta, plan W5.1) ----------------------

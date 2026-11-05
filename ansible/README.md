@@ -16,8 +16,8 @@ Internet ──TLS──> Cloudflare edge ──Tunnel (outbound only)──> cl
                                                                   │  (edge network, routes by container labels)
                                                                   ▼
                                      prod stack: php / worker / pwa / PG-app / redis   (docker compose -p prod)
-                                     preview stacks: pr-N.* (docker compose -p pr-N)
-                                                                  │  (btp-shared network)
+                                     preview stacks: pr-N.* (docker compose -p pr-N, via edge-preview)
+                                                                  │  (btp-shared / btp-shared-preview)
                                                                   ▼
                                      shared: Valhalla (serve-only) + PG-reference (PostGIS)
 ```
@@ -26,15 +26,20 @@ The VM has **no open public port**: all ingress arrives over the outbound
 Cloudflare Tunnel, so Cloudflare Access is non-bypassable (plan W7.2). Traefik
 and cloudflared publish no host ports.
 
+Prod and previews never share a network (ADR-061 addendum): prod php sits on
+`edge` + `btp-shared`, preview php on `edge-preview` + `btp-shared-preview`, and
+only Traefik, Valhalla and PG-reference join both sides. Traefik trusts
+`X-Forwarded-For` from the fixed `edge` subnet (`edge_subnet`, cloudflared) only.
+
 ## What this playbook does (roles)
 
 | Role | Responsibility |
 |------|----------------|
-| `common` | Timezone, base packages, unattended-upgrades, `deploy` user + SSH keys, `/etc/bike-trip-planner{,/jwt}`, optional anti-reclaim heartbeat timer |
-| `docker` | Docker Engine + compose plugin (arm64), `edge` + `btp-shared` networks, optional GHCR login |
-| `traefik` | Traefik as the single reverse proxy — Docker provider, plain HTTP, **no ACME**, no published ports |
+| `common` | Timezone, base packages, unattended-upgrades, `deploy` user + SSH keys, `preview-deploy` user + forced-command SSH keys, `/etc/bike-trip-planner{,/jwt}`, optional anti-reclaim heartbeat timer |
+| `docker` | Docker Engine + compose plugin (arm64), `edge` / `btp-shared` (prod) and `edge-preview` / `btp-shared-preview` (previews) networks, optional GHCR login |
+| `traefik` | Traefik as the single reverse proxy on both edge networks: Docker provider, plain HTTP, **no ACME**, no published ports |
 | `cloudflared` | Cloudflare Tunnel with a **locally-managed `config.yml`** (wildcard `*.${DOMAIN}` + `www.${DOMAIN}` -> `http://traefik:80`), credentials from Vault |
-| `app_deploy` | Repo checkout (first clone only, for compose bind mounts), prod env file (`/etc/bike-trip-planner/app.env`) + JWT PEM from Vault, `btp-compose` wrapper, `deploy-prod.sh` hook, optional events-refresh timer |
+| `app_deploy` | Repo checkout (first clone only, for compose bind mounts), prod env file (`/etc/bike-trip-planner/app.env`) + JWT PEM from Vault, release records dir, `btp-compose` wrapper, `deploy-prod.sh` hook, preview root + `main` checkout + `btp-preview` forced command, optional events-refresh timer |
 | `shared_infra` | Shared Valhalla (`deploy/valhalla/compose.yaml`, project `valhalla-shared`) + PG-reference (PostGIS) on `btp-shared` and its read-only `reference_ro` app role (SELECT on `osm` + `tourism`), seed `valhalla-tiles` volume from a shipped tar |
 | `backup` | Nightly PG-app backup: `pg_dump` -> `age` (recipient-only) -> `rclone` to B2 and/or OCI, GFS retention, via a systemd timer (`btp-backup.timer`). On-demand with `make backup-now`. PG-reference is NOT backed up (reproducible). See [ADR-062](../docs/adr/adr-062-backup-and-disaster-recovery.md). |
 
@@ -65,7 +70,10 @@ could cover the OCI half later — plan W5.3):
    set `valhalla_tiles_tar` before re-running (or seed once, manually).
 4. **GHA SSH access** — expose SSH through a Cloudflare Access `ssh` app so the
    `deploy-prod` / `deploy-preview` jobs (plan W3/W4, delivered by PR-C/PR-E)
-   can reach the `deploy` user. Put those public keys in `deploy_ssh_public_keys`.
+   can reach the VM. Two key pairs: the `production` environment's goes in
+   `deploy_ssh_public_keys` (`deploy` user), the `preview` environment's in
+   `preview_deploy_ssh_public_keys` (`preview-deploy` user, forced command
+   `btp-preview`). The playbook refuses a key present in both lists.
 
 ## Configure
 
@@ -114,20 +122,31 @@ deployed by GHA `deploy-prod` at cutover (first `v*` tag; plan W4 / PR-C), which
 SSHes in and runs the equivalent of the rendered `{{ app_dir }}/deploy-prod.sh`:
 
 ```bash
-cd /opt/bike-trip-planner
-git fetch --tags --force
-git checkout --force refs/tags/<tag>
-btp-compose up -d --pull always
+/opt/bike-trip-planner/deploy-prod.sh <tag> <commit> <php-digest> <pwa-digest> <provisioner-digest>
 ```
+
+The first deploy of a tag records its commit and digests in
+`/etc/bike-trip-planner/releases/<tag>`; a different set for an already recorded
+tag is refused, and so is a tag that no longer points at its recorded commit.
+`deploy-prod.sh <tag>` alone (rollback) reuses the record.
 
 **Every** prod `docker compose` call goes through `/usr/local/bin/btp-compose`
 (rendered from `roles/app_deploy/templates/btp-compose.j2`): the deploy, the
 rollback (`deploy-prod.sh <previous tag>`), the events-refresh timer and manual
-provisioning. It refuses to run unless the checkout sits on a `vX.Y.Z` tag, sets
-`PHP_IMAGE` / `PWA_IMAGE` / `PROVISIONER_IMAGE` to `<*_image_repo>:<that tag>`,
-and passes `--env-file /etc/bike-trip-planner/app.env -p prod -f compose.yaml
--f deploy/prod/compose.yaml`. So the images always match the compose files
-that run them, e.g. `btp-compose ps`, `btp-compose logs -f php`.
+provisioning. It refuses to run unless the checkout sits on a recorded `vX.Y.Z`
+tag at its recorded commit, sets `PHP_IMAGE` / `PWA_IMAGE` / `PROVISIONER_IMAGE`
+to `<*_image_repo>@<recorded digest>`, and passes `--env-file
+/etc/bike-trip-planner/app.env -p prod -f compose.yaml -f deploy/prod/compose.yaml`.
+So the images always match the compose files that run them, e.g.
+`btp-compose ps`, `btp-compose logs -f php`.
+
+Previews never go through the `deploy` user. GHA `deploy-preview` /
+`teardown-preview` SSH in as `preview-deploy`, whose only command is
+`/usr/local/bin/btp-preview` (`deploy <pr> <php-digest> <pwa-digest>` or
+`teardown <pr>`). It runs the `-preview` images by digest with the compose
+files of `/opt/bike-trip-planner-previews/base` (a checkout of `main` it fetches
+on each deploy) and `/opt/bike-trip-planner-previews/preview.env`, which the
+operator provides, readable by `preview-deploy` (`root:preview-deploy 0640`).
 
 Ansible clones the repo once and never moves the checkout afterwards
 (`update: false`): the deploy owns the revision. `btp-compose` therefore fails

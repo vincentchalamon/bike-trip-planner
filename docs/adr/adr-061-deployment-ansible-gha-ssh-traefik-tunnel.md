@@ -59,3 +59,49 @@ There is no Coolify "Redeploy" button. Rollback = **redeploy the previous tag**:
 
 - The `compose.yaml` base is still read as-is (now by CI and the SSH deploy, no longer by Coolify); the prod-only deltas live in `deploy/prod/compose.yaml`, layered explicitly on the VM.
 - Backup & DR is decoupled from Coolify and finalised in ADR-062 (Backup & DR).
+
+## Addendum (2026-11-05): previews are isolated from production
+
+The model above let a pull request reach production. `deploy-preview` checked out the PR on the
+VM and ran *its* compose files as the `deploy` user, who is in the `docker` group (root-equivalent
+on the host) and can read `app.env`. A PR run also had `packages: write` on the release images,
+which prod pulled by mutable tag, and every SSH secret was a repository secret, readable by any
+workflow a branch of this repository adds. Previews and prod also shared the `edge` and
+`btp-shared` networks, where `php` (the worker's Mercure host) could resolve to a preview
+container. The deploy model changes on four points.
+
+1. **Two GitHub Environments hold the secrets.** `production` (deployment policy: `v*` tags only)
+   holds the prod SSH key and every prod-side secret (`SENTRY_*`, `INCIDENT_DISPATCH_TOKEN`,
+   `PROD_HEALTH_URL`, `PROD_REPO_DIR`); `upload-sourcemaps`, `deploy-prod` and `smoke-test` bind
+   it. `preview` holds a **second** SSH key; `deploy-preview` / `teardown-preview` bind it,
+   gated by required reviewers. No SSH secret stays at repository level. `SSH_KNOWN_HOSTS` is
+   mandatory: there is no `ssh-keyscan` fallback any more.
+2. **The preview key can only run a forced command.** It belongs to a separate VM user,
+   `preview-deploy`, whose `authorized_keys` entry is
+   `restrict,command="/usr/local/bin/btp-preview"`. `btp-preview` accepts
+   `deploy <pr> <php-digest> <pwa-digest>` and `teardown <pr>`, nothing else. It runs the
+   compose files of a VM-side checkout of `main` (`/opt/bike-trip-planner-previews/base`), never
+   the PR's, and pulls the images by digest from separate `-preview` packages. A PR therefore
+   changes what a preview's containers run, not how they are run (mounts, networks, Traefik
+   routes). That user can read neither `app.env` nor the prod keypairs. The cost is that a PR
+   changing `compose.yaml` or `deploy/preview/compose.yaml` is previewed with main's version of
+   those files.
+3. **Prod runs images by digest.** `build-images` pushes PR images to
+   `bike-trip-planner-<service>-preview:pr-<n>` only, and job outputs carry the digests of the
+   tag build. `deploy-prod` passes the tag, its commit and the three digests to
+   `deploy-prod.sh`, which records them in `/etc/bike-trip-planner/releases/<tag>` on the first
+   deploy and refuses a different set for a tag it already recorded. `btp-compose` runs
+   `<repo>@<digest>` from that record and refuses to run when the checkout is not on the
+   recorded commit. A re-pushed image tag or a moved git tag no longer reaches prod. Rollback is
+   unchanged in use (re-run the old tag's `deploy-prod`, or `deploy-prod.sh <tag>` on the VM,
+   which reads the record). On a rebuilt VM the records are gone: re-run the tag's
+   `deploy-prod` job, or pass the commit and digests listed in that run's summary.
+4. **Prod and previews never share a network.** Previews join `edge-preview` and
+   `btp-shared-preview`; Traefik, Valhalla and PG-reference join both sides. On `edge` and
+   `btp-shared`, `php` can only be prod's. `edge` has a fixed subnet (`edge_subnet`), and Traefik
+   trusts `X-Forwarded-For` from that subnet only (cloudflared), so a preview container that
+   reaches Traefik cannot forge a client IP.
+
+Not addressed here: GHCR still lets the repository's `GITHUB_TOKEN` write the release packages
+(narrowing that needs a release-only credential), and images are not signed. Digest pinning
+makes both matter for availability only, not for what prod runs.

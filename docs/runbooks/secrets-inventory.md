@@ -67,24 +67,27 @@ For rotation, see [secrets-rotation.md](secrets-rotation.md).
 Non-secret runtime values (`DOMAIN`, `TRUSTED_PROXIES`, `VALHALLA_BASE_URI`,
 `MAILER_SENDER_EMAIL`, `CONTACT_EMAIL`, `OPENAGENDA_DATASET`, `ANDROID_APP_PACKAGE` /
 `ANDROID_SHA256_CERT_FINGERPRINTS`, the image repositories) live in
-`ansible/group_vars/all.yml`. The image tag is not configured anywhere: `btp-compose` takes
-it from the release tag the checkout is on.
+`ansible/group_vars/all.yml`. The image tag is not configured anywhere: `btp-compose` runs the
+digests recorded for the release tag the checkout is on.
 
 ## CI/CD secrets (consumed by GitHub Actions)
 
+Secrets marked `production` or `preview` are **environment** secrets (see
+[deployment.md](../deployment.md#configure-github)): `production` only admits `v*` tags, so no
+pull_request run can read them. None of them may also exist at repository level.
+
 | Name | Type | Consumer (workflow) | Rotation | Reference |
 |---|---|---|---|---|
-| `SSH_HOST` | Prod VM SSH host | `deploy.yml` (`deploy-prod`, `deploy-preview`, `teardown-preview`) | On VM change | ADR-061 |
-| `SSH_USER` | Deploy SSH user | `deploy.yml` | On-compromise | ADR-061 |
-| `SSH_KEY` | Deploy SSH private key | `deploy.yml` | On-compromise (new pair, public key into `deploy_ssh_public_keys`, re-run the playbook) | ADR-061 |
-| `SSH_KNOWN_HOSTS` | Pinned SSH host key (optional; falls back to `ssh-keyscan`) | `deploy.yml` | On VM host-key change | ADR-061 |
-| `PROD_REPO_DIR` | Checkout path on the VM (optional, default `/opt/bike-trip-planner`) | `deploy.yml` | Static | ADR-061 |
-| `PREVIEW_REPO_ROOT` / `PREVIEW_ENV_FILE` | Preview checkout root and preview env file on the VM | `deploy.yml` (`deploy-preview`, `teardown-preview`) | Static | ADR-061 |
-| `PROD_HEALTH_URL` | Smoke-test host (optional, default `https://www.bike-trip-planner.com`) | `deploy.yml` (`smoke-test`) | Static | ADR-061 |
-| `INCIDENT_DISPATCH_TOKEN` | Fine-grained PAT (`Contents: read and write`) | `deploy.yml` (`smoke-test` opens an incident on failure); also configured in the external monitors | **90 days** | [incident-alerting.md](incident-alerting.md) |
-| `SENTRY_AUTH_TOKEN` | Error-tracking org token | `deploy.yml` (`upload-sourcemaps`) | On-compromise | ADR-031 |
-| `SENTRY_URL` / `SENTRY_ORG` / `SENTRY_PROJECT` | Metadata (not sensitive) | `deploy.yml` (`upload-sourcemaps`) | Static | ADR-031 |
-| `NEXT_PUBLIC_SENTRY_DSN` | Browser DSN | `deploy.yml` (`build-images` build arg, `upload-sourcemaps`) | Same as runtime | ADR-031 |
+| `SSH_HOST` | VM SSH host (`production` and `preview`) | `deploy.yml` (`deploy-prod`, `deploy-preview`, `teardown-preview`) | On VM change | ADR-061 |
+| `SSH_USER` | `deploy` (`production`) / `preview-deploy` (`preview`) | `deploy.yml` | On-compromise | ADR-061 |
+| `SSH_KEY` | SSH private key, a different pair per environment; the `preview` one only runs the `btp-preview` forced command | `deploy.yml` | On-compromise (new pair, public key into `deploy_ssh_public_keys` / `preview_deploy_ssh_public_keys`, re-run the playbook) | ADR-061 |
+| `SSH_KNOWN_HOSTS` | Pinned SSH host key, required (`production` and `preview`) | `deploy.yml` | On VM host-key change | ADR-061 |
+| `PROD_REPO_DIR` | Checkout path on the VM (optional, default `/opt/bike-trip-planner`; `production`) | `deploy.yml` | Static | ADR-061 |
+| `PROD_HEALTH_URL` | Smoke-test host (optional, default `https://www.bike-trip-planner.com`; `production`) | `deploy.yml` (`smoke-test`) | Static | ADR-061 |
+| `INCIDENT_DISPATCH_TOKEN` | Fine-grained PAT (`Contents: read and write`; `production`) | `deploy.yml` (`smoke-test` opens an incident on failure); also configured in the external monitors | **90 days** | [incident-alerting.md](incident-alerting.md) |
+| `SENTRY_AUTH_TOKEN` | Error-tracking org token (`production`) | `deploy.yml` (`upload-sourcemaps`, build step only) | On-compromise | ADR-031 |
+| `SENTRY_URL` / `SENTRY_ORG` / `SENTRY_PROJECT` | Metadata (not sensitive; `production`) | `deploy.yml` (`upload-sourcemaps`) | Static | ADR-031 |
+| `NEXT_PUBLIC_SENTRY_DSN` | Browser DSN (public, repository secret) | `deploy.yml` (`build-images` build arg, `upload-sourcemaps`) | Same as runtime | ADR-031 |
 | `CLAUDE_CODE_OAUTH_TOKEN` | Anthropic OAuth token | `claude.yml`, `claude-code-review.yml` | Managed by Anthropic | `CLAUDE.md` |
 | `GITHUB_TOKEN` | Built-in GHA token | All workflows | Managed by GitHub (per run) | - |
 
@@ -100,8 +103,9 @@ When rebuilding from scratch (VM lost or re-provisioned):
 2. Re-provision the VM with **Ansible** (`ansible-playbook -i inventory.ini playbook.yml
    --ask-vault-pass`, see [oracle-vm-reclaimed.md](oracle-vm-reclaimed.md)). The playbook
    renders `app.env`, both PEM keypairs, the backup config and the tunnel credentials.
-3. Deploy the current tag (GHA `deploy-prod`, or `/opt/bike-trip-planner/deploy-prod.sh <tag>`).
-   Until then `btp-compose` refuses to run: the fresh clone is not on a release tag.
+3. Deploy the current tag: re-run its GHA `deploy-prod` job, or on the VM
+   `/opt/bike-trip-planner/deploy-prod.sh <tag> <commit> <digests>` with the values from that
+   run's summary (a fresh VM has no release record). Until then `btp-compose` refuses to run.
 4. Restore PG-app data: fetch the `age` private key from **Bitwarden vault** (canonical item
    `bike-trip-planner / age private key`; rotation keeps that name for the current key and
    renames the old one `... legacy YYYYMMDD`, see [secrets-rotation.md](secrets-rotation.md)),
@@ -117,6 +121,7 @@ with `scripts/generate-keypairs.sh`, see [secrets-rotation.md](secrets-rotation.
 
 - Development secrets (`.env`, `.env.local`, `.env.test`): not sensitive; the dev keypairs are
   generated by `make start-dev` / the dev entrypoint.
-- Preview env file (`PREVIEW_ENV_FILE` on the VM): must hold preview-only values, never the
-  prod secrets. Ansible does not provision it yet (TODO in `deploy.yml`); without it,
-  `deploy-preview` fails closed.
+- Preview env file (`/opt/bike-trip-planner-previews/preview.env` on the VM, read by
+  `btp-preview`): must hold preview-only values, never the prod secrets, and be readable by the
+  `preview-deploy` user. Ansible does not provision it yet; without it, `deploy-preview` fails
+  closed.

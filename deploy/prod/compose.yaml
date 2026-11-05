@@ -99,10 +99,11 @@ volumes:
     name: valhalla-shared_valhalla-tiles
 
 networks:
-  # Both created by Ansible ahead of any deploy (W5).
+  # Both created by Ansible ahead of any deploy (W5), and prod-only: previews use
+  # edge-preview / btp-shared-preview, so `php` on these networks is always prod's.
   # Traefik <-> php.
   edge:
     external: true
-  # Shared infra (Valhalla + PG-référence), spanning prod and every preview.
+  # Shared infra (Valhalla + PG-référence) <-> prod.
   btp-shared:
     external: true

@@ -57,7 +57,7 @@ During the beta, error tracking is **Sentry SaaS** (ADR-039); GlitchTip is the p
 
 ## Verification and follow-up
 
-- Tag `v*` → `deploy.yml` runs `build-images` → `deploy-prod` SSHes to the VM, checks out the tag and runs `btp-compose up -d --pull always`, which pins the images to that tag (see [`ansible/README.md`](../../ansible/README.md#deploy-hook-who-brings-the-app-up)) → `smoke-test` probes `/api/healthz` and `/api/health`.
+- Tag `v*` → `deploy.yml` runs `build-images` → `deploy-prod` SSHes to the VM and runs `deploy-prod.sh` with the tag, its commit and the image digests, which records them, checks out the tag and rolls the stack through `btp-compose` by digest (see [`ansible/README.md`](../../ansible/README.md#deploy-hook-who-brings-the-app-up)) → `smoke-test` probes `/api/healthz` and `/api/health`.
 - If the smoke test fails, it dispatches an `uptime_alert` and `incident-create.yml` opens an incident issue (P2); follow [release-rollback.md](release-rollback.md).
 - Confirm the Sentry release page lists the new release with `environment: production`.
 - Note the deploy in the channel or issue tracker for visibility.
