@@ -94,7 +94,9 @@ use App\ApiResource\Mcp\ListTripsInput;
                 ],
             ),
             security: "is_granted('ROLE_USER')",
-            validationContext: ['groups' => ['trip_request:create']],
+            // `Default` carries every bound on the settings; the create group only adds what a
+            // creation requires on top (the source URL).
+            validationContext: ['groups' => ['Default', 'trip_request:create']],
             input: TripRequest::class,
             mercure: true,
             processor: TripCreateProcessor::class,
@@ -266,7 +268,7 @@ use App\ApiResource\Mcp\ListTripsInput;
             // The HTTP twin's context, because it is the same record being checked: without the
             // group, `sourceUrl` is not required and a trip leaves for the workers with no route
             // to fetch, failing three messages later where nobody is listening.
-            validationContext: ['groups' => ['trip_request:create']],
+            validationContext: ['groups' => ['Default', 'trip_request:create']],
             input: CreateTripInput::class,
             output: TripCreated::class,
             // There is nothing to read. ReadProvider returns null without calling any provider

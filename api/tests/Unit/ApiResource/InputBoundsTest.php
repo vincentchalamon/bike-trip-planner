@@ -98,12 +98,44 @@ final class InputBoundsTest extends TestCase
     }
 
     /**
+     * @return iterable<string, array{string, int}>
+     */
+    public static function manualAccommodationUrls(): iterable
+    {
+        yield 'https' => ['https://booking.example/abc', 0];
+        yield 'scheme-less, read as https' => ['www.gite.fr', 0];
+        yield 'blank, read as none' => ['  ', 0];
+        yield 'javascript scheme' => ['javascript:alert(1)', 1];
+        yield 'data scheme' => ['data:text/html,x', 1];
+        yield 'userinfo' => ['https://user@gite.fr', 1];
+        yield 'free text' => ['voir le site', 1];
+        yield 'overlong' => ['https://gite.fr/'.str_repeat('a', 2040), 1];
+    }
+
+    #[Test]
+    #[DataProvider('manualAccommodationUrls')]
+    public function aManualAccommodationUrlMustBeHttp(string $url, int $expectedViolations): void
+    {
+        $request = new StageManualAccommodationRequest();
+        $request->name = 'Gite';
+        $request->address = '1 rue Test, Lyon';
+        $request->url = $url;
+
+        $violations = $this->validator()->validate($request);
+
+        self::assertCount($expectedViolations, $violations);
+        if (0 < $expectedViolations) {
+            self::assertSame('url', $violations[0]?->getPropertyPath());
+        }
+    }
+
+    /**
      * @return iterable<string, array{list<string>|null}>
      */
     public static function validationGroups(): iterable
     {
         yield 'update (Default)' => [null];
-        yield 'creation' => [['trip_request:create']];
+        yield 'creation' => [['Default', 'trip_request:create']];
     }
 
     /**

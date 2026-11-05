@@ -1753,7 +1753,7 @@ export interface components {
             address: string;
             /** @description Optional total price in euros. Maps to estimatedPriceMin = estimatedPriceMax with isExactPrice = true. */
             priceTotal?: number | null;
-            /** @description Optional booking/listing link. */
+            /** @description Optional booking/listing link: an http(s) URL; a missing scheme is read as https. */
             url?: string | null;
         };
         "Stage.StagePoiWaypointRequest": {
@@ -1950,7 +1950,8 @@ export interface components {
             /** @enum {string} */
             status?: "draft" | "analyzing" | "analyzed" | "failed";
         };
-        "Trip.TripRequest-validation.trip_request.create": {
+        "Trip.TripRequest-validation.Default_trip_request.create": {
+            /** Format: uri */
             sourceUrl: string | null;
             /** Format: date-time */
             startDate?: string | null;
@@ -2059,7 +2060,7 @@ export interface components {
             };
             isLocked?: boolean;
         };
-        "Trip.jsonld-validation.trip_request.create": components["schemas"]["HydraItemBaseSchema"] & {
+        "Trip.jsonld-validation.Default_trip_request.create": components["schemas"]["HydraItemBaseSchema"] & {
             id?: string;
             /** @description Map of ComputationName->value to status string */
             computationStatus?: {
@@ -4905,7 +4906,7 @@ export interface operations {
         /** @description The new Trip resource */
         requestBody: {
             content: {
-                "application/ld+json": components["schemas"]["Trip.TripRequest-validation.trip_request.create"];
+                "application/ld+json": components["schemas"]["Trip.TripRequest-validation.Default_trip_request.create"];
             };
         };
         responses: {
@@ -4915,7 +4916,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/ld+json": components["schemas"]["Trip.jsonld-validation.trip_request.create"];
+                    "application/ld+json": components["schemas"]["Trip.jsonld-validation.Default_trip_request.create"];
                 };
             };
             /** @description The "Idempotency-Key" header is missing or malformed. */

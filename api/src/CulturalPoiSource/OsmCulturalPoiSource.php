@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\CulturalPoiSource;
 
+use App\Format\WebsiteUrl;
 use App\Osm\CulturalPoiRepositoryInterface;
 
 final readonly class OsmCulturalPoiSource implements CulturalPoiSourceInterface
@@ -24,7 +25,8 @@ final readonly class OsmCulturalPoiSource implements CulturalPoiSourceInterface
 
         $pois = [];
         // openingHours/description/imageUrl/wikipediaUrl are enriched from Wikidata
-        // at provision time (ADR-041); no runtime SPARQL call.
+        // at provision time (ADR-041); no runtime SPARQL call. The URLs are stored as
+        // imported (OSM tags, Wikidata claims), so they are normalised on the way out.
         foreach ($this->culturalPoiRepository->findInCorridor($route, $radiusMeters) as $poi) {
             $pois[] = [
                 // A nameless POI stays nameless: the display label is resolved
@@ -36,13 +38,13 @@ final readonly class OsmCulturalPoiSource implements CulturalPoiSourceInterface
                 'osmType' => $poi['osmType'],
                 'osmId' => $poi['osmId'],
                 'openingHours' => $poi['openingHours'],
-                'website' => $poi['website'],
+                'website' => WebsiteUrl::normalize($poi['website']),
                 'estimatedPrice' => null,
                 'description' => $poi['description'],
                 'wikidataId' => $poi['wikidata'],
                 'source' => 'osm',
-                'imageUrl' => $poi['imageUrl'],
-                'wikipediaUrl' => $poi['wikipediaUrl'],
+                'imageUrl' => WebsiteUrl::normalize($poi['imageUrl']),
+                'wikipediaUrl' => WebsiteUrl::normalize($poi['wikipediaUrl']),
             ];
         }
 

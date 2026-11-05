@@ -204,13 +204,11 @@ final class TripCreateTest extends ApiTestCase
     }
 
     /**
-     * The POST operation uses the 'trip_request:create' validation group,
-     * which only validates NotBlank on sourceUrl. URL format, range, and
-     * positive constraints are in the Default group (validated on PATCH only).
-     * Invalid URL formats are caught asynchronously during route fetching.
+     * A well-formed https URL that no fetcher supports passes validation: the
+     * provider is resolved asynchronously during route fetching.
      */
     #[Test]
-    public function acceptsInvalidUrlFormatOnCreate(): void
+    public function acceptsUnsupportedProviderUrlOnCreate(): void
     {
         $response = self::createClient()->request('POST', '/trips', [
             'headers' => array_merge(['Content-Type' => 'application/ld+json', 'Idempotency-Key' => 'idempotency-key-for-test-010'], $this->authHeader($this->jwtToken)),
@@ -219,8 +217,6 @@ final class TripCreateTest extends ApiTestCase
             ],
         ]);
 
-        // POST only validates NotBlank(groups: ['trip_request:create'])
-        // URL format validation is in Default group, not triggered here
         $this->assertResponseStatusCodeSame(202);
         $this->assertResponseHeaderSame('content-type', 'application/ld+json');
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/trip-schema.json'));
@@ -228,6 +224,42 @@ final class TripCreateTest extends ApiTestCase
         $data = $response->toArray(false);
         $this->assertNotEmpty($data['id']);
         $this->assertSame('Trip', $data['@type']);
+    }
+
+    /**
+     * @return iterable<string, array{array<string, mixed>, string}>
+     */
+    public static function outOfRangePayloadProvider(): iterable
+    {
+        yield 'fatigue factor above 1' => [['fatigueFactor' => 5.0], 'fatigueFactor'];
+        yield 'negative elevation penalty' => [['elevationPenalty' => -1.0], 'elevationPenalty'];
+        yield 'departure hour past 23' => [['departureHour' => 30], 'departureHour'];
+        yield 'daily cap below 30 km' => [['maxDistancePerDay' => 1.0], 'maxDistancePerDay'];
+        yield 'average speed above 50' => [['averageSpeed' => 500.0], 'averageSpeed'];
+        yield 'unknown accommodation type' => [['enabledAccommodationTypes' => ['palace']], 'enabledAccommodationTypes[0]'];
+        yield 'no accommodation type' => [['enabledAccommodationTypes' => []], 'enabledAccommodationTypes'];
+        yield 'end before start' => [['startDate' => '2026-08-10T00:00:00+00:00', 'endDate' => '2026-08-01T00:00:00+00:00'], 'endDate'];
+        yield 'plain http source' => [['sourceUrl' => 'http://www.komoot.com/tour/999'], 'sourceUrl'];
+    }
+
+    /**
+     * The settings carry their bounds in the `Default` group, which the creation runs
+     * alongside its own: without it, an out-of-range pacing was stored and computed.
+     *
+     * @param array<string, mixed> $override
+     */
+    #[DataProvider('outOfRangePayloadProvider')]
+    #[Test]
+    public function rejectsOutOfRangeSettingsOnCreate(array $override, string $propertyPath): void
+    {
+        $response = self::createClient()->request('POST', '/trips', [
+            'headers' => array_merge(['Content-Type' => 'application/ld+json', 'Idempotency-Key' => 'idempotency-key-for-test-range-'.$propertyPath], $this->authHeader($this->jwtToken)),
+            'json' => $override + ['sourceUrl' => 'https://www.komoot.com/tour/999'],
+        ]);
+
+        $this->assertResponseStatusCodeSame(422);
+        $paths = array_column($response->toArray(false)['violations'] ?? [], 'propertyPath');
+        $this->assertContains($propertyPath, $paths);
     }
 
     /**

@@ -20,6 +20,13 @@ describe('resolvePushRoute', () => {
     expect(resolvePushRoute({ category: 'zoneOpening' })).toBe('/(tabs)/create');
   });
 
+  it('never interpolates an id that is not a plain identifier', () => {
+    expect(resolvePushRoute({ tripId: '../account/delete' })).toBeNull();
+    expect(resolvePushRoute({ tripId: 't1?x=1' })).toBeNull();
+    expect(resolvePushRoute({ tripId: 't1', stageId: '../../account' })).toBe('/trip/t1');
+    expect(resolvePushRoute({ tripId: 42 as unknown as string })).toBeNull();
+  });
+
   it('returns null when nothing is actionable', () => {
     expect(resolvePushRoute(null)).toBeNull();
     expect(resolvePushRoute(undefined)).toBeNull();

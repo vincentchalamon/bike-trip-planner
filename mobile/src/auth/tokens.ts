@@ -4,6 +4,11 @@ import * as SecureStore from 'expo-secure-store';
 const JWT_KEY = 'btp_jwt';
 const REFRESH_KEY = 'btp_refresh';
 
+// Never restored onto another device from an iCloud Keychain or a backup.
+const STORE_OPTIONS: SecureStore.SecureStoreOptions = {
+  keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+};
+
 // In-memory mirror so the request middleware can read the JWT synchronously.
 let jwtCache: string | null = null;
 let refreshCache: string | null = null;
@@ -24,10 +29,10 @@ export function getRefresh(): string | null {
 
 export async function setTokens(jwt: string, refresh: string | null): Promise<void> {
   jwtCache = jwt;
-  await SecureStore.setItemAsync(JWT_KEY, jwt);
+  await SecureStore.setItemAsync(JWT_KEY, jwt, STORE_OPTIONS);
   if (refresh) {
     refreshCache = refresh;
-    await SecureStore.setItemAsync(REFRESH_KEY, refresh);
+    await SecureStore.setItemAsync(REFRESH_KEY, refresh, STORE_OPTIONS);
   }
 }
 

@@ -52,6 +52,12 @@ final readonly class DeviceTokenRegisterProcessor implements ProcessorInterface
         if ($deviceToken instanceof DeviceToken) {
             // Re-registration: refresh the platform and (re)bind to the current
             // user. Same user + same platform is a no-op that still returns 200.
+            $previousOwner = $deviceToken->getUser();
+            if (!$previousOwner->getId()->equals($user->getId())) {
+                // Kept for device handover, but traced: nothing proves the caller holds the device.
+                $this->logger->info('Device token moved to another account', ['from' => $previousOwner->getId()->toRfc4122(), 'to' => $user->getId()->toRfc4122()]);
+            }
+
             $deviceToken->setUser($user)->setPlatform($data->platform);
             $status = Response::HTTP_OK;
         } else {

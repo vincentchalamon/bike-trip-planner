@@ -208,6 +208,27 @@ final class StageAddManualAccommodationTest extends ApiTestCase
     }
 
     #[Test]
+    public function nonHttpUrlReturns422AndPersistsNothing(): void
+    {
+        $this->seedTripWithStages(self::TRIP_ID);
+        $this->mockNominatimClient([['lat' => '45.10', 'lon' => '5.10']]);
+
+        $response = $this->client->request('POST', '/trips/'.self::TRIP_ID.'/stages/'.$this->stageIdAt(self::TRIP_ID, 0).'/accommodations/manual', [
+            'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
+            'json' => ['name' => 'Gite', 'address' => '5 rue Test, Grenoble', 'url' => 'javascript:alert(1)'],
+        ]);
+
+        $this->assertResponseStatusCodeSame(422);
+        $this->assertSame('url', $response->toArray(false)['violations'][0]['propertyPath'] ?? null);
+
+        /** @var TripStageStoreInterface $repo */
+        $repo = self::getContainer()->get(TripStageStoreInterface::class);
+        $stages = $repo->getStages(self::TRIP_ID);
+        $this->assertNotNull($stages);
+        $this->assertNull($stages[0]->selectedAccommodation);
+    }
+
+    #[Test]
     public function missingRequiredFieldsReturns422(): void
     {
         $this->seedTripWithStages(self::TRIP_ID);

@@ -6,6 +6,7 @@ namespace App\Tests\Unit\State;
 
 use ApiPlatform\Metadata\Post;
 use App\ApiResource\Account\DeviceToken as DeviceTokenResource;
+use App\Entity\DeviceToken;
 use App\Entity\User;
 use App\Enum\DevicePlatform;
 use App\Repository\DeviceTokenRepositoryInterface;
@@ -62,5 +63,44 @@ final class DeviceTokenRegisterProcessorTest extends TestCase
 
         $this->expectException(ConflictHttpException::class);
         $this->processor->process(new DeviceTokenResource('fcm-race', DevicePlatform::ANDROID), new Post());
+    }
+
+    #[Test]
+    public function aTokenMovedToAnotherAccountIsLogged(): void
+    {
+        $previous = new User('previous@example.com');
+        $current = new User('current@example.com');
+        $this->security->method('getUser')->willReturn($current);
+        $deviceToken = new DeviceToken($previous, 'fcm-handover', DevicePlatform::ANDROID);
+        $this->deviceTokenRepository->method('findOneByToken')->willReturn($deviceToken);
+
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects($this->exactly(2))->method('info')->willReturnCallback(
+            static function (string $message, array $context) use ($previous, $current): void {
+                if ('Device token moved to another account' === $message) {
+                    self::assertSame(['from' => $previous->getId()->toRfc4122(), 'to' => $current->getId()->toRfc4122()], $context);
+                }
+            },
+        );
+
+        $processor = new DeviceTokenRegisterProcessor($this->security, $this->entityManager, $this->deviceTokenRepository, $logger);
+        $response = $processor->process(new DeviceTokenResource('fcm-handover', DevicePlatform::IOS), new Post());
+
+        self::assertSame(200, $response->getStatusCode());
+        self::assertSame($current, $deviceToken->getUser());
+    }
+
+    #[Test]
+    public function reRegisteringOwnTokenIsNotReportedAsAMove(): void
+    {
+        $user = new User('same@example.com');
+        $this->security->method('getUser')->willReturn($user);
+        $this->deviceTokenRepository->method('findOneByToken')->willReturn(new DeviceToken($user, 'fcm-own', DevicePlatform::ANDROID));
+
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects($this->once())->method('info')->with('Device token registered');
+
+        new DeviceTokenRegisterProcessor($this->security, $this->entityManager, $this->deviceTokenRepository, $logger)
+            ->process(new DeviceTokenResource('fcm-own', DevicePlatform::ANDROID), new Post());
     }
 }

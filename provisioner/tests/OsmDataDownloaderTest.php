@@ -49,8 +49,7 @@ final class OsmDataDownloaderTest extends TestCase
     #[Test]
     public function downloadAlwaysWritesThroughTmpThenAtomicRenamesToFinalPath(): void
     {
-        $httpClient = new MockHttpClient(static fn (): MockResponse => new MockResponse('osm-bytes'));
-        $downloader = new OsmDataDownloader($this->regionsDir, $httpClient);
+        $downloader = new OsmDataDownloader($this->regionsDir, self::geofabrik(static fn (): MockResponse => new MockResponse('osm-bytes')));
 
         $downloader->download('bretagne');
 
@@ -63,8 +62,7 @@ final class OsmDataDownloaderTest extends TestCase
     #[Test]
     public function downloadCreatesRegionsDirectoryWhenMissing(): void
     {
-        $httpClient = new MockHttpClient(static fn (): MockResponse => new MockResponse('osm-bytes'));
-        $downloader = new OsmDataDownloader($this->regionsDir, $httpClient);
+        $downloader = new OsmDataDownloader($this->regionsDir, self::geofabrik(static fn (): MockResponse => new MockResponse('osm-bytes')));
 
         self::assertDirectoryDoesNotExist($this->regionsDir);
 
@@ -84,14 +82,14 @@ final class OsmDataDownloaderTest extends TestCase
         $testCase = $this;
         $tmpExistedDuringStreaming = false;
 
-        $httpClient = new MockHttpClient(static function () use ($tmpPath, &$tmpExistedDuringStreaming, $testCase): MockResponse {
+        $httpClient = self::geofabrik(static function () use ($tmpPath, &$tmpExistedDuringStreaming, $testCase): MockResponse {
             // While the response is being streamed, the .tmp file must exist
             // and the final path must still hold the stale content.
             $tmpExistedDuringStreaming = file_exists($tmpPath);
             $testCase::assertSame('stale-content', file_get_contents(\dirname($tmpPath).'/bretagne-latest.osm.pbf'));
 
             return new MockResponse('fresh-bytes');
-        });
+        }, 'fresh-bytes');
 
         $downloader = new OsmDataDownloader($this->regionsDir, $httpClient);
         $downloader->download('bretagne');
@@ -109,7 +107,7 @@ final class OsmDataDownloaderTest extends TestCase
         $finalPath = $this->regionsDir.'/bretagne-latest.osm.pbf';
         file_put_contents($finalPath, 'stale-but-valid');
 
-        $httpClient = new MockHttpClient(static fn (): MockResponse => new MockResponse('not found', ['http_code' => 404]));
+        $httpClient = self::geofabrik(static fn (): MockResponse => new MockResponse('not found', ['http_code' => 404]));
         $downloader = new OsmDataDownloader($this->regionsDir, $httpClient);
 
         try {
@@ -133,7 +131,7 @@ final class OsmDataDownloaderTest extends TestCase
         $finalPath = $this->regionsDir.'/bretagne-latest.osm.pbf';
         file_put_contents($finalPath, 'stale-but-valid');
 
-        $httpClient = new MockHttpClient(static fn (): MockResponse => new MockResponse('', [
+        $httpClient = self::geofabrik(static fn (): MockResponse => new MockResponse('', [
             'error' => 'connection refused',
         ]));
         $downloader = new OsmDataDownloader($this->regionsDir, $httpClient);
@@ -150,6 +148,48 @@ final class OsmDataDownloaderTest extends TestCase
     }
 
     #[Test]
+    public function aTransferThatDoesNotMatchThePublishedChecksumIsRejected(): void
+    {
+        mkdir($this->regionsDir, 0o755, true);
+        $finalPath = $this->regionsDir.'/bretagne-latest.osm.pbf';
+        file_put_contents($finalPath, 'stale-but-valid');
+
+        $downloader = new OsmDataDownloader($this->regionsDir, self::geofabrik(static fn (): MockResponse => new MockResponse('truncated'), 'the-whole-extract'));
+
+        try {
+            $downloader->download('bretagne');
+            self::fail('Expected DownloadFailedException');
+        } catch (DownloadFailedException $downloadFailedException) {
+            self::assertStringContainsString('MD5', $downloadFailedException->getMessage());
+        }
+
+        self::assertSame('stale-but-valid', file_get_contents($finalPath));
+        self::assertFileDoesNotExist($finalPath.'.tmp');
+    }
+
+    #[Test]
+    public function aMissingChecksumFailsBeforeTheExtractIsFetched(): void
+    {
+        $requested = [];
+        $httpClient = new MockHttpClient(static function (string $method, string $url) use (&$requested): MockResponse {
+            $requested[] = $url;
+
+            return str_ends_with($url, '.md5') ? new MockResponse('', ['http_code' => 404]) : new MockResponse('osm-bytes');
+        });
+        $downloader = new OsmDataDownloader($this->regionsDir, $httpClient);
+
+        try {
+            $downloader->download('bretagne');
+            self::fail('Expected DownloadFailedException');
+        } catch (DownloadFailedException $downloadFailedException) {
+            self::assertStringContainsString('Checksum', $downloadFailedException->getMessage());
+        }
+
+        self::assertCount(1, $requested);
+        self::assertFileDoesNotExist($this->regionsDir.'/bretagne-latest.osm.pbf');
+    }
+
+    #[Test]
     public function targetPathReturnsCanonicalLayout(): void
     {
         $downloader = new OsmDataDownloader($this->regionsDir);
@@ -158,5 +198,18 @@ final class OsmDataDownloaderTest extends TestCase
             $this->regionsDir.'/bretagne-latest.osm.pbf',
             $downloader->targetPath('bretagne'),
         );
+    }
+
+    /**
+     * Serves the extract through $extract and, next to it, the `.md5` of $published
+     * (by default the bytes the test's extract answers with).
+     *
+     * @param callable(): MockResponse $extract
+     */
+    public static function geofabrik(callable $extract, string $published = 'osm-bytes'): MockHttpClient
+    {
+        return new MockHttpClient(static fn (string $method, string $url): MockResponse => str_ends_with($url, '.md5')
+            ? new MockResponse(md5($published).'  extract-latest.osm.pbf'."\n")
+            : $extract());
     }
 }

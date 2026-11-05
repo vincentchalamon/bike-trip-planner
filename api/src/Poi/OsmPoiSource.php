@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Poi;
 
+use App\Format\WebsiteUrl;
 use App\Osm\PoiRepositoryInterface;
 
 /**
@@ -29,7 +30,8 @@ final readonly class OsmPoiSource implements PoiSourceInterface
                 'osmType' => $poi['osmType'],
                 'osmId' => $poi['osmId'],
                 'openingHours' => $poi['openingHours'],
-                'website' => $poi['website'],
+                // Indexed verbatim from the OSM tag.
+                'website' => WebsiteUrl::normalize($poi['website']),
                 'wikidataId' => null,
                 'source' => 'osm',
             ];

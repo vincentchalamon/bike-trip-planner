@@ -3,7 +3,8 @@
 # Keeps the prod topology untouched (APP_ENV=prod, read_only, JWT secrets) and ONLY
 # adds a Mailcatcher service (capture magic-link emails for the real auth flow).
 #
-# Load EXPLICITLY (never auto-loaded): docker compose -f compose.yaml -f compose.recette.yaml ...
+# Load EXPLICITLY (never auto-loaded):
+#   docker compose --env-file .env --env-file .env.recette -f compose.yaml -f compose.recette.yaml ...
 # Named compose.recette.yaml (not compose.override.yaml) to avoid implicit auto-load.
 # JWT keys + passphrase are wired here (overrides below), so `make start-recette`
 # and `make provision-recette` no longer pass JWT_* on the command line; they only
@@ -30,30 +31,29 @@ secrets:
 
 # Shared env for php/worker — extension field + YAML merge key to avoid
 # duplicating the block across the services (review #612).
+#
+# The secrets come from the untracked .env.recette (scripts/generate-recette-secrets.sh,
+# run by `make start-recette`), never from this file: the recette can be exposed over
+# ngrok (SEC-22). Every recette compose call passes `--env-file .env --env-file .env.recette`;
+# without it, `:?` stops compose before anything boots on an empty key.
+# The JWT/OAuth passphrases stay fixed: they only encrypt keypairs generated locally
+# under the gitignored .docker/*-recette/ directories.
 x-recette-env: &recette-env
   MAILER_DSN: smtp://mailcatcher:1025
   JWT_PASSPHRASE: recette
   OAUTH_PASSPHRASE: recette
-  # Non-empty so the fail-closed boot guard passes locally (encrypts the authorization
-  # codes and refresh tokens league stores).
-  OAUTH_ENCRYPTION_KEY: recette-oauth-encryption-key
-  # Non-default Mercure key so the SEC-004 fail-closed boot guard passes locally.
+  OAUTH_ENCRYPTION_KEY: "${RECETTE_OAUTH_ENCRYPTION_KEY:?run make start-recette (writes .env.recette)}"
   # Publisher/subscriber/secret must match for the embedded hub to verify the
   # app-issued subscriber tokens (HS256, which needs a >=256-bit / >=32-byte key).
-  MERCURE_PUBLISHER_JWT_KEY: recette-mercure-jwt-secret-min-32-bytes
-  MERCURE_SUBSCRIBER_JWT_KEY: recette-mercure-jwt-secret-min-32-bytes
-  MERCURE_JWT_SECRET: recette-mercure-jwt-secret-min-32-bytes
-  # Non-default token-encryption key so the SEC-003 fail-closed boot guard passes
-  # locally (encrypts refresh tokens at rest).
-  REFRESH_TOKEN_ENC_KEY: recette-refresh-token-enc-key
-  # Non-default app secret so the fail-closed boot guard passes locally (signs
-  # CSRF tokens, signed URIs and remember-me cookies).
-  APP_SECRET: recette-app-secret
+  MERCURE_PUBLISHER_JWT_KEY: "${RECETTE_MERCURE_JWT_KEY:?run make start-recette (writes .env.recette)}"
+  MERCURE_SUBSCRIBER_JWT_KEY: "${RECETTE_MERCURE_JWT_KEY:?run make start-recette (writes .env.recette)}"
+  MERCURE_JWT_SECRET: "${RECETTE_MERCURE_JWT_KEY:?run make start-recette (writes .env.recette)}"
+  REFRESH_TOKEN_ENC_KEY: "${RECETTE_REFRESH_TOKEN_ENC_KEY:?run make start-recette (writes .env.recette)}"
+  APP_SECRET: "${RECETTE_APP_SECRET:?run make start-recette (writes .env.recette)}"
   # The recette database volume is created with the compose default password.
   ALLOW_LOCAL_DEFAULT_CREDENTIALS: "true"
-  # Non-empty secret so AccessRequestHmacService boots (ADR-029): the early-access
-  # confirmation email is signed with it. Prod stays fail-closed on the empty default.
-  ACCESS_REQUEST_HMAC_SECRET: recette-access-request-hmac-secret
+  # Signs the early-access confirmation email (ADR-029).
+  ACCESS_REQUEST_HMAC_SECRET: "${RECETTE_ACCESS_REQUEST_HMAC_SECRET:?run make start-recette (writes .env.recette)}"
   # Push notifications (epic #1051). Empty in recette: FcmCredentials fails closed
   # only on an actual send, so the rest of the stack boots without a real FCM key.
   FCM_SERVICE_ACCOUNT_JSON: "${FCM_SERVICE_ACCOUNT_JSON:-}"
