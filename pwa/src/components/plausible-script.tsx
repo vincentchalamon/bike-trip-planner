@@ -21,19 +21,19 @@ export function PlausibleScript() {
   // `NEXT_PUBLIC_*` are inlined at build time, so E2E (which runs a production
   // build in CI) cannot exercise the "configured" branch via env vars. Mirror
   // the `__PLAYWRIGHT_*` window-override convention used by the onboarding tour
-  // to let tests supply the config at runtime. The override is only ever
-  // consulted as a fallback when the real env vars are unset; in a correctly
-  // configured production deployment the env vars are set, so the override
-  // branch is never reached.
+  // to let tests supply the config at runtime. The override only exists in a
+  // build made with the test hooks on: elsewhere a page global (or a DOM element
+  // clobbering one) must never be able to choose which script gets loaded.
   const override =
+    process.env.NEXT_PUBLIC_ENABLE_TEST_HOOKS === "true" &&
     typeof window !== "undefined"
       ? (window as PlausibleTestOverride)
       : undefined;
   const domain =
-    process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN ??
+    process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN ||
     override?.__PLAYWRIGHT_PLAUSIBLE_DOMAIN;
   const src =
-    process.env.NEXT_PUBLIC_PLAUSIBLE_SRC ??
+    process.env.NEXT_PUBLIC_PLAUSIBLE_SRC ||
     override?.__PLAYWRIGHT_PLAUSIBLE_SRC;
 
   if (!domain || !src) {
