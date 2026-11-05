@@ -22,15 +22,17 @@ final class ContainerHardeningTest extends TestCase
         'redis' => ['CHOWN', 'SETGID', 'SETUID'],
     ];
 
+    private const string REDIS_PASSWORD = '${REDIS_PASSWORD:-ChangeMeRedis}';
+
     #[Test]
     #[DataProvider('services')]
     public function aServiceKeepsOnlyTheCapabilitiesItUses(string $name): void
     {
-        $service = $this->service($name);
+        $compose = $this->compose();
 
-        self::assertSame(['no-new-privileges:true'], $service['security_opt'] ?? null);
-        self::assertSame(['ALL'], $service['cap_drop'] ?? null);
-        self::assertSame(self::CAPABILITIES[$name], $service['cap_add'] ?? []);
+        self::assertSame(['no-new-privileges:true'], $this->at($compose, 'services', $name, 'security_opt'));
+        self::assertSame(['ALL'], $this->at($compose, 'services', $name, 'cap_drop'));
+        self::assertSame(self::CAPABILITIES[$name], $this->at($compose, 'services', $name, 'cap_add') ?? []);
     }
 
     /**
@@ -46,39 +48,42 @@ final class ContainerHardeningTest extends TestCase
     #[Test]
     public function onlyTheirClientsReachTheDataStores(): void
     {
-        self::assertSame(['backend'], $this->service('database')['networks'] ?? null);
-        self::assertSame(['backend'], $this->service('redis')['networks'] ?? null);
-        self::assertNotContains('backend', $this->service('pwa')['networks'] ?? ['default']);
-        self::assertContains('backend', $this->service('php')['networks'] ?? []);
-        self::assertContains('backend', $this->service('worker')['networks'] ?? []);
+        $compose = $this->compose();
+
+        self::assertSame(['backend'], $this->at($compose, 'services', 'database', 'networks'));
+        self::assertSame(['backend'], $this->at($compose, 'services', 'redis', 'networks'));
+        self::assertNotContains('backend', $this->listAt($compose, 'services', 'pwa', 'networks'));
+        self::assertContains('backend', $this->listAt($compose, 'services', 'php', 'networks'));
+        self::assertContains('backend', $this->listAt($compose, 'services', 'worker', 'networks'));
     }
 
     #[Test]
     public function redisRequiresItsPasswordEverywhere(): void
     {
-        $password = '${REDIS_PASSWORD:-ChangeMeRedis}';
-        $command = $this->service('redis')['command'] ?? null;
-        self::assertIsArray($command);
-        self::assertSame($password, $command[array_search('--requirepass', $command, true) + 1] ?? null);
+        $compose = $this->compose();
+        $command = $this->listAt($compose, 'services', 'redis', 'command');
+        $flag = array_search('--requirepass', $command, true);
+        self::assertIsInt($flag);
+        self::assertSame(self::REDIS_PASSWORD, $command[$flag + 1] ?? null);
 
         foreach (['php', 'worker'] as $name) {
-            $environment = $this->service($name)['environment'] ?? null;
-            self::assertIsArray($environment);
             foreach (['MESSENGER_TRANSPORT_DSN', 'MESSENGER_FAILED_DSN', 'REDIS_URL', 'LOCK_DSN'] as $dsn) {
-                self::assertStringStartsWith('redis://:'.$password.'@redis:6379', (string) ($environment[$dsn] ?? ''), $name.' '.$dsn);
+                $value = $this->at($compose, 'services', $name, 'environment', $dsn);
+                self::assertIsString($value, $name.' '.$dsn);
+                self::assertStringStartsWith('redis://:'.self::REDIS_PASSWORD.'@redis:6379', $value, $name.' '.$dsn);
             }
         }
 
         // The preview overlay replaces the whole command: it must keep the password.
-        $preview = Yaml::parseFile(self::root().'/deploy/preview/compose.yaml', Yaml::PARSE_CUSTOM_TAGS);
+        $preview = Yaml::parseFile($this->root().'/deploy/preview/compose.yaml', Yaml::PARSE_CUSTOM_TAGS);
         self::assertIsArray($preview);
-        self::assertContains('--requirepass', $preview['services']['redis']['command'] ?? []);
+        self::assertContains('--requirepass', $this->listAt($preview, 'services', 'redis', 'command'));
     }
 
     #[Test]
     public function theMercureHubAndCaddyAdminTakeNoAnonymousRequest(): void
     {
-        $lines = array_map(trim(...), file(self::root().'/.docker/php/Caddyfile', \FILE_IGNORE_NEW_LINES) ?: []);
+        $lines = array_map(trim(...), file($this->root().'/.docker/php/Caddyfile', \FILE_IGNORE_NEW_LINES) ?: []);
 
         self::assertContains('admin off', $lines);
         self::assertNotContains('anonymous', $lines);
@@ -87,30 +92,62 @@ final class ContainerHardeningTest extends TestCase
     #[Test]
     public function traefikReadsTheDockerApiThroughTheProxyOnly(): void
     {
-        $compose = Yaml::parse((string) preg_replace('/\{\{[^}]*\}\}/', 'x', (string) file_get_contents(self::root().'/ansible/roles/traefik/templates/compose.yaml.j2')));
+        $template = file_get_contents($this->root().'/ansible/roles/traefik/templates/compose.yaml.j2');
+        self::assertIsString($template);
+        $compose = Yaml::parse((string) preg_replace('/\{\{[^}]*\}\}/', 'x', $template));
         self::assertIsArray($compose);
 
-        foreach ($compose['services']['traefik']['volumes'] ?? [] as $volume) {
-            self::assertStringNotContainsString('docker.sock', (string) $volume);
+        foreach ($this->listAt($compose, 'services', 'traefik', 'volumes') as $volume) {
+            self::assertIsString($volume);
+            self::assertStringNotContainsString('docker.sock', $volume);
         }
-        self::assertSame('0', $compose['services']['socket-proxy']['environment']['POST'] ?? null);
-        self::assertTrue($compose['networks']['docker-api']['internal'] ?? false);
+
+        self::assertSame('0', $this->at($compose, 'services', 'socket-proxy', 'environment', 'POST'));
+        self::assertTrue($this->at($compose, 'networks', 'docker-api', 'internal'));
     }
 
     /**
      * @return array<mixed>
      */
-    private function service(string $name): array
+    private function compose(): array
     {
-        $compose = Yaml::parseFile(self::root().'/compose.yaml');
+        $compose = Yaml::parseFile($this->root().'/compose.yaml');
         self::assertIsArray($compose);
-        $service = $compose['services'][$name] ?? null;
-        self::assertIsArray($service);
 
-        return $service;
+        return $compose;
     }
 
-    private static function root(): string
+    /**
+     * @param array<mixed> $tree
+     */
+    private function at(array $tree, string ...$path): mixed
+    {
+        $node = $tree;
+        foreach ($path as $key) {
+            if (!\is_array($node) || !\array_key_exists($key, $node)) {
+                return null;
+            }
+
+            $node = $node[$key];
+        }
+
+        return $node;
+    }
+
+    /**
+     * @param array<mixed> $tree
+     *
+     * @return array<mixed>
+     */
+    private function listAt(array $tree, string ...$path): array
+    {
+        $node = $this->at($tree, ...$path) ?? [];
+        self::assertIsArray($node, implode('.', $path));
+
+        return $node;
+    }
+
+    private function root(): string
     {
         return \dirname(__DIR__, 4);
     }
