@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Fraunces, Inter_Tight, JetBrains_Mono } from "next/font/google";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { unstable_rethrow } from "next/navigation";
+import { headers } from "next/headers";
 import { DEFAULT_LOCALE } from "@/i18n/locale";
 import { SITE_URL } from "@/lib/constants";
 import "./globals.css";
@@ -83,6 +84,10 @@ export default async function RootLayout({
     messages = (await import(`../../messages/${DEFAULT_LOCALE}.json`)).default;
   }
 
+  // Set by src/proxy.ts. next-themes renders an inline script before hydration (the
+  // no-flash theme bootstrap), which the CSP only runs with this nonce.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+
   return (
     <html
       lang={locale}
@@ -98,6 +103,7 @@ export default async function RootLayout({
               defaultTheme="system"
               enableSystem
               disableTransitionOnChange
+              nonce={nonce}
             >
               <AuthGuard>
                 <TooltipProvider>{children}</TooltipProvider>

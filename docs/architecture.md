@@ -338,6 +338,7 @@ Superseded, revoked and withdrawn ADRs are kept for history and marked as such.
 **Security**
 
 - [ADR-011](adr/adr-011-security-input-validation-and-ssrf-prevention-for-gpx-url-ingestion.md) Input validation and SSRF prevention
+- [ADR-083](adr/adr-083-the-nonce-belongs-to-whoever-renders-the-page.md) The nonce belongs to whoever renders the page (document CSP)
 
 **Withdrawn AI features** (all withdrawn by ADR-052)
 
