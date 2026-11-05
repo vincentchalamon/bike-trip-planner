@@ -15,7 +15,7 @@ function stubCookieJar(refreshValue: string | undefined): {
   const jar = {
     set: vi.fn(),
     get: (name: string) =>
-      name === "refresh_token" && refreshValue
+      name === "__Host-refresh_token" && refreshValue
         ? { value: refreshValue }
         : undefined,
   };
@@ -61,7 +61,7 @@ describe("POST /api/auth/refresh", () => {
     });
     // Re-pins the rotated refresh token server-side.
     expect(jar.set).toHaveBeenCalledWith(
-      "refresh_token",
+      "__Host-refresh_token",
       "refresh-new",
       expect.objectContaining({ httpOnly: true, maxAge: expect.any(Number) }),
     );
@@ -94,7 +94,7 @@ describe("POST /api/auth/refresh", () => {
     expect(res.status).toBe(401);
     // The stale cookie is dropped (empty value, maxAge 0).
     expect(jar.set).toHaveBeenCalledWith(
-      "refresh_token",
+      "__Host-refresh_token",
       "",
       expect.objectContaining({ maxAge: 0 }),
     );

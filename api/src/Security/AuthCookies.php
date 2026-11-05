@@ -9,5 +9,10 @@ namespace App\Security;
  */
 final class AuthCookies
 {
-    public const string REFRESH_TOKEN = 'refresh_token';
+    /**
+     * `__Host-`: the browser only accepts it Secure, Path=/ and without a Domain, so no
+     * sibling subdomain can plant or overwrite it. Written by the PWA's BFF, which must
+     * use the same name.
+     */
+    public const string REFRESH_TOKEN = '__Host-refresh_token';
 }

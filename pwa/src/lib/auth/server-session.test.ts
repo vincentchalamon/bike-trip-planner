@@ -9,7 +9,7 @@ const mockedCookies = vi.mocked(cookies);
 function stubRefreshCookie(token: string | undefined): void {
   mockedCookies.mockResolvedValue({
     get: (name: string) =>
-      name === "refresh_token" && token ? { value: token } : undefined,
+      name === "__Host-refresh_token" && token ? { value: token } : undefined,
   } as unknown as Awaited<ReturnType<typeof cookies>>);
 }
 
@@ -80,7 +80,7 @@ describe("resolveServerSession", () => {
     const [url, init] = fetchMock.mock.calls[0] ?? [];
     expect(String(url)).toMatch(/\/auth\/session$/);
     expect((init as RequestInit).headers).toMatchObject({
-      Cookie: "refresh_token=tok",
+      Cookie: "__Host-refresh_token=tok",
     });
   });
 });

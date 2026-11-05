@@ -18,6 +18,7 @@ use League\Bundle\OAuth2ServerBundle\Manager\ClientManagerInterface;
 use League\Bundle\OAuth2ServerBundle\ValueObject\Grant;
 use League\Bundle\OAuth2ServerBundle\ValueObject\RedirectUri;
 use PHPUnit\Framework\Attributes\Test;
+use App\Security\AuthCookies;
 use Symfony\Component\BrowserKit\Cookie as BrowserKitCookie;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
 
@@ -70,7 +71,7 @@ final class TokenIssuanceTest extends ApiTestCase
 
         $this->browser = self::createClient();
         $this->browser->getCookieJar()->set(
-            new BrowserKitCookie('refresh_token', self::COOKIE, null, '/', 'localhost'),
+            new BrowserKitCookie(AuthCookies::REFRESH_TOKEN, self::COOKIE, null, '/', 'localhost'),
         );
     }
 

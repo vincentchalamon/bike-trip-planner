@@ -378,9 +378,11 @@ async function setStaleRefreshCookie(page: Page): Promise<void> {
   // landing-page.spec.ts.
   await page.context().addCookies([
     {
-      name: "refresh_token",
+      // `__Host-` cookies are refused unless Secure.
+      name: "__Host-refresh_token",
       value: "stale-invalid-refresh-token",
       url: process.env.PLAYWRIGHT_BASE_URL ?? "https://localhost",
+      secure: true,
     },
   ]);
 }

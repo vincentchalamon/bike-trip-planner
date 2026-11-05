@@ -175,11 +175,14 @@ test.describe("Landing page", () => {
       // cookie the backend rejects must yield the landing in the SSR HTML, with
       // no stale-cookie dashboard shell that then snaps back.
       const baseURL = testInfo.project.use.baseURL ?? "https://localhost";
-      await page
-        .context()
-        .addCookies([
-          { name: "refresh_token", value: "unvalidated-seed", url: baseURL },
-        ]);
+      await page.context().addCookies([
+        {
+          name: "__Host-refresh_token",
+          value: "unvalidated-seed",
+          url: baseURL,
+          secure: true,
+        },
+      ]);
       await page.route("**/.well-known/mercure*", (route) => route.abort());
 
       // Assert on the raw SSR HTML (before any JS) to pin the SERVER-side
@@ -197,11 +200,14 @@ test.describe("Landing page", () => {
       // fails: once the check resolves, the store's auth state wins and the
       // landing is shown instead of leaving the user on an empty dashboard.
       const baseURL = testInfo.project.use.baseURL ?? "https://localhost";
-      await page
-        .context()
-        .addCookies([
-          { name: "refresh_token", value: "stale-token", url: baseURL },
-        ]);
+      await page.context().addCookies([
+        {
+          name: "__Host-refresh_token",
+          value: "stale-token",
+          url: baseURL,
+          secure: true,
+        },
+      ]);
 
       await page.route("**/auth/refresh", (route, request) => {
         if (request.method() !== "POST") return route.fallback();

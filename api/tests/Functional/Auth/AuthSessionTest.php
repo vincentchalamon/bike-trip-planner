@@ -10,6 +10,7 @@ use App\Entity\User;
 use App\Security\RefreshTokenEncryptor;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
+use App\Security\AuthCookies;
 use Symfony\Component\BrowserKit\Cookie as BrowserKitCookie;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
@@ -61,7 +62,7 @@ final class AuthSessionTest extends ApiTestCase
             // populates $request->cookies; the provider reads the cookie bag, so
             // the token must go through the BrowserKit CookieJar (host localhost).
             $client->getCookieJar()->set(
-                new BrowserKitCookie('refresh_token', $cookieToken, null, '/', 'localhost'),
+                new BrowserKitCookie(AuthCookies::REFRESH_TOKEN, $cookieToken, null, '/', 'localhost'),
             );
         }
 

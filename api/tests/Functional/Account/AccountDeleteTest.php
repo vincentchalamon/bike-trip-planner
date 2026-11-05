@@ -145,7 +145,7 @@ final class AccountDeleteTest extends ApiTestCase
         $this->assertResponseStatusCodeSame(204);
 
         $setCookie = $response->getHeaders(false)['set-cookie'][0] ?? '';
-        $this->assertStringContainsString('refresh_token=', $setCookie);
+        $this->assertStringContainsString('__Host-refresh_token=', $setCookie);
         // Cookie must be cleared: Symfony stamps a past expiry and Max-Age=0.
         $this->assertMatchesRegularExpression('/Max-Age=0|expires=Thu, 01-Jan-1970/i', $setCookie);
     }
