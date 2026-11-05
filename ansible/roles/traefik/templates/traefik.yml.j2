@@ -14,7 +14,7 @@ entryPoints:
     forwardedHeaders:
       trustedIPs:
         - 127.0.0.1/32
-        - {{ edge_subnet }}
+        - "{{ edge_subnet }}"
 
 providers:
   docker:
