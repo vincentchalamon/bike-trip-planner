@@ -227,4 +227,3 @@ previous address.
 On the sweep in the known limits: `PurgeExpiredTokensCommand` (PWA session tokens only) now
 keeps a rotated token for the lifetime of the successor it pointed at, so the first-party reuse
 detection still finds the row it needs.
-

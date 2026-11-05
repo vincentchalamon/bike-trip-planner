@@ -253,4 +253,3 @@ is no grace window on this side: an agent racing two refreshes with the same tok
 grant, as OAuth 2.1 §4.3.1 recommends. A token revoked by the user leaves no live grant, so its
 replay revokes nothing; one revoked before a later re-authorisation of the same client does
 revoke that new grant, which is the conservative reading of a stale credential resurfacing.
-
