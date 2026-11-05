@@ -1,6 +1,15 @@
 {
     {$CADDY_GLOBAL_OPTIONS}
 
+    # Keep the inbound X-Forwarded-For chain when proxying to the PWA: without a
+    # trusted peer Caddy replaces it with Traefik's IP, so the BFF could not relay
+    # the client IP to the backend. Same private ranges as TRUSTED_PROXIES. Strict
+    # = read right to left, so Caddy's own client_ip ignores prepended values too.
+    servers {
+        trusted_proxies static private_ranges
+        trusted_proxies_strict
+    }
+
     frankenphp {
         {$FRANKENPHP_CONFIG}
 
@@ -202,7 +211,12 @@
 
         # Comment the following line if you don't want Next.js to catch requests for HTML documents.
         # In this case, they will be handled by the PHP app.
-        reverse_proxy @pwa http://{$PWA_UPSTREAM}
+        # Trusting the peer would also pass the upstream X-Forwarded-Host/-Proto
+        # through; pin them to what Caddy sent before, only XFF is meant to change.
+        reverse_proxy @pwa http://{$PWA_UPSTREAM} {
+            header_up X-Forwarded-Host {hostport}
+            header_up X-Forwarded-Proto {scheme}
+        }
 
         @phpRoute {
             not path /.well-known/mercure*

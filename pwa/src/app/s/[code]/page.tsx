@@ -5,20 +5,30 @@ import { TripNotFound } from "@/components/trip-not-found";
 import { SiteChrome } from "@/components/site-chrome";
 import { ShareProvider } from "@/lib/share-context";
 import type { SharedTripDetail } from "@/lib/api/client";
+import { backendUrl, clientIpHeaders } from "@/lib/auth/backend";
 import SharedTripPage from "./shared-trip-page";
+
+/** TripShare::$shortCode: 6 random bytes, base64url-encoded. */
+const SHORT_CODE = /^[A-Za-z0-9_-]{8}$/;
 
 /**
  * The public `GET /s/{code}` payload, fetched once per request: `cache()` lets
  * {@link generateMetadata} and the page share the same call. Goes through the
  * INTERNAL backend URL (not the public https origin: avoids the self-signed
- * cert + server-side routing). A revoked/unknown code, or any error, is `null`.
+ * cert + server-side routing). A revoked/unknown/malformed code, or any error,
+ * is `null`; a malformed one never reaches the backend.
  */
 const getSharedTrip = cache(
   async (code: string): Promise<SharedTripDetail | null> => {
+    if (!SHORT_CODE.test(code)) {
+      return null;
+    }
     try {
-      const backend = process.env.API_BACKEND_URL ?? "http://php";
-      const res = await fetch(`${backend}/s/${encodeURIComponent(code)}`, {
-        headers: { Accept: "application/ld+json" },
+      const res = await fetch(`${backendUrl()}/s/${code}`, {
+        headers: {
+          Accept: "application/ld+json",
+          ...(await clientIpHeaders()),
+        },
         cache: "no-store",
         // Bound SSR on a slow/hanging backend (project HTTP convention: 10s).
         signal: AbortSignal.timeout(10_000),
