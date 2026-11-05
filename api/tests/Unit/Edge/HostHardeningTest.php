@@ -38,12 +38,18 @@ final class HostHardeningTest extends TestCase
 
         $validated = false;
         foreach ($tasks as $task) {
-            foreach ($task['block'] ?? [] as $step) {
-                if ('/usr/sbin/sshd -t' === ($step['ansible.builtin.command'] ?? null)) {
+            $block = $task['block'] ?? [];
+            if (!\is_array($block)) {
+                continue;
+            }
+
+            foreach ($block as $step) {
+                if (\is_array($step) && '/usr/sbin/sshd -t' === ($step['ansible.builtin.command'] ?? null)) {
                     $validated = true;
                 }
             }
         }
+
         self::assertTrue($validated, 'the sshd drop-in is not checked with sshd -t');
     }
 
@@ -57,6 +63,7 @@ final class HostHardeningTest extends TestCase
             // `flush ruleset` would also wipe Docker's tables and cut the containers off.
             self::assertStringNotContainsString('flush ruleset', $line);
         }
+
         self::assertContains('table inet btp_host', $rules);
         self::assertContains('delete table inet btp_host', $rules);
         self::assertContains('type filter hook input priority filter; policy drop;', $rules);
@@ -70,15 +77,17 @@ final class HostHardeningTest extends TestCase
         $users = [];
         foreach ($this->tasks('common') as $task) {
             $key = $task['ansible.posix.authorized_key'] ?? null;
-            if (\is_array($key)) {
-                $users[(string) $key['user']] = $key;
+            if (\is_array($key) && \is_string($key['user'] ?? null)) {
+                $users[$key['user']] = $key;
             }
         }
 
         foreach (['{{ deploy_user }}', '{{ preview_deploy_user }}'] as $user) {
             self::assertArrayHasKey($user, $users);
             self::assertTrue($users[$user]['exclusive'] ?? false, $user.' authorized_keys is not exclusive');
-            self::assertStringContainsString("| join('\n')", (string) $users[$user]['key']);
+            $keys = $users[$user]['key'] ?? null;
+            self::assertIsString($keys);
+            self::assertStringContainsString("| join('\n')", $keys);
         }
     }
 
@@ -92,8 +101,12 @@ final class HostHardeningTest extends TestCase
 
         $installed = [];
         foreach ($this->tasks('backup') as $task) {
-            $installed[] = $task['ansible.builtin.template']['dest'] ?? null;
+            $template = $task['ansible.builtin.template'] ?? null;
+            if (\is_array($template)) {
+                $installed[] = $template['dest'] ?? null;
+            }
         }
+
         self::assertContains('/etc/systemd/system/btp-backup-failed@.service', $installed);
     }
 
