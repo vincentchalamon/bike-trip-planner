@@ -40,6 +40,7 @@ Planned-operation runbooks replace **Symptoms** with **When to use**.
 | [zone-opening-corrections.md](zone-opening-corrections.md) | Read what the completeness gate refused and correct it by hand |
 | [events-refresh.md](events-refresh.md) | Refresh the perishable events layer (upsert + purge) |
 | [valhalla-routing-graph.md](valhalla-routing-graph.md) | Build the routing graph locally and ship it to the VM (`make routing-build`, `make routing-publish`) |
+| [backup-restore.md](backup-restore.md) | Backup retention the VM cannot rewrite, heartbeat / failure alerts, scripted restore test |
 | [secrets-inventory.md](secrets-inventory.md) | Every production and CI secret: where it lives, who reads it |
 | [secrets-rotation.md](secrets-rotation.md) | Rotation policy and per-secret procedures |
 | [base-image-cve-maintenance.md](base-image-cve-maintenance.md) | Base-image digest refresh for OS CVEs (triage `fixed` vs won't-fix) |

@@ -13,6 +13,11 @@ set -euo pipefail
 : "${APP_DIR:?APP_DIR is required}"
 : "${RCLONE_CONFIG:?RCLONE_CONFIG is required}"
 : "${KEEP_DAILY:?}" "${KEEP_WEEKLY:?}" "${KEEP_MONTHLY:?}"
+RETENTION_MODE="${RETENTION_MODE:-script}"
+case "$RETENTION_MODE" in
+  script|lifecycle) ;;
+  *) echo "backup: RETENTION_MODE must be script or lifecycle, got '${RETENTION_MODE}'" >&2; exit 1 ;;
+esac
 export RCLONE_CONFIG
 
 # Keep the newest $keep objects under $path, delete the rest. Object names are
@@ -46,8 +51,17 @@ for remote in $BACKUP_REMOTES; do
   rclone copyto "$out" "${base}/daily/${name}"
   [ "$dow" = "1" ] && rclone copyto "$out" "${base}/weekly/${name}"
   [ "$dom" = "01" ] && rclone copyto "$out" "${base}/monthly/${name}"
-  prune "${base}/daily" "$KEEP_DAILY"
-  prune "${base}/weekly" "$KEEP_WEEKLY"
-  prune "${base}/monthly" "$KEEP_MONTHLY"
+  # lifecycle: the bucket expires old objects, and the key may not delete.
+  if [ "$RETENTION_MODE" = "script" ]; then
+    prune "${base}/daily" "$KEEP_DAILY"
+    prune "${base}/weekly" "$KEEP_WEEKLY"
+    prune "${base}/monthly" "$KEEP_MONTHLY"
+  fi
   echo "backup: shipped ${name} to ${base}"
 done
+
+# 3. Dead man's switch: only a run that shipped to every remote pings it.
+if [ -n "${HEARTBEAT_URL:-}" ]; then
+  curl -fsS -m 10 --retry 3 -o /dev/null "$HEARTBEAT_URL" \
+    || echo "backup: heartbeat ping failed" >&2
+fi

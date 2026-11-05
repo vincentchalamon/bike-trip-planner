@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help start build start-dev stop install qa test test-pwa php-shell pwa-shell ensure-keypairs-recette keypairs-test provision provision-override provision-recette events-refresh routing-build routing-up routing-publish backup-now coverage coverage-ci migration migrate db-create fixtures
+.PHONY: help start build start-dev stop install qa test test-pwa php-shell pwa-shell ensure-keypairs-recette keypairs-test provision provision-override provision-recette events-refresh routing-build routing-up routing-publish backup-now backup-restore-test coverage coverage-ci migration migrate db-create fixtures
 
 # Dev loads the iso-prod base + dev overrides automatically. Prod targets pass an
 # explicit `-f compose.yaml`, which takes precedence over COMPOSE_FILE, so the dev
@@ -337,6 +337,13 @@ routing-publish: ## Ship the built routing graph to a server (e.g. make routing-
 backup-now: ## Trigger an on-demand PG-app backup on the VM (needs BACKUP_SSH=user@host)
 	@test -n "$(BACKUP_SSH)" || { echo "Usage: make backup-now BACKUP_SSH=user@host"; exit 1; }
 	@ssh $(BACKUP_SSH) 'set -a && . /etc/bike-trip-planner/backup/backup.env && /usr/local/bin/btp-backup.sh'
+
+# Restore test (docs/runbooks/backup-restore.md): fetch a dump, decrypt it, restore it
+# into a throwaway PostGIS container, check it holds users. Runs HERE, not on the VM:
+# it needs the age private key, which never goes to the VM. Needs age, rclone, docker.
+backup-restore-test: ## Restore the newest (or OBJECT=<tier>/<name>) backup into a throwaway container (needs AGE_IDENTITY=<key file>)
+	@test -n "$(AGE_IDENTITY)" || { echo "Usage: make backup-restore-test AGE_IDENTITY=<age key file> [BACKUP_REMOTE=b2:btp-backups] [OBJECT=daily/<name>]"; exit 1; }
+	@AGE_IDENTITY="$(AGE_IDENTITY)" BACKUP_REMOTE="$(BACKUP_REMOTE)" ./scripts/backup-restore-test.sh $(OBJECT)
 
 ## --- 🗄️ Database ---
 migration: ## Generate a Doctrine migration

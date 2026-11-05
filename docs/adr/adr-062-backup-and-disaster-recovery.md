@@ -127,3 +127,35 @@ reachable).
 - The secrets-inventory / secrets-rotation rows that cite "ADR-038 (#527)" for
   Backup & DR should be repointed to this ADR when PR-D (W9) relocates the secrets
   store from Coolify to Vault.
+
+## Addendum (2026-11-05): the VM can no longer erase the history, and a failure is noticed
+
+Three gaps of the design above. The prune ran `rclone deletefile` from the VM, so the VM's
+application key needed `deleteFiles` and anyone holding the VM could wipe every copy, which
+is the case off-site backups exist for. A failed run left a line in the journal and nothing
+else. And a dump was never shown to restore until the day it was needed.
+
+1. **Retention can move to the bucket.** `backup_retention_mode` (`script` by default, the
+   behaviour above; or `lifecycle`). In `lifecycle` mode `btp-backup.sh` never deletes:
+   per-prefix lifecycle rules (`daily/` 7 days, `weekly/` 28, `monthly/` 180) expire the
+   tiers, Object Lock with a default retention protects each version until it expires, and
+   the VM key loses `deleteFiles`. B2 counts days, not objects, so the tiers are the time
+   equivalent of the `backup_keep_*` counts. `script` stays the default so that a run of the
+   playbook cannot break a bucket that has no lifecycle rules yet; moving over is the
+   procedure in [backup-restore.md](../runbooks/backup-restore.md).
+2. **Failures alert.** `btp-backup.service` has `OnFailure=btp-backup-failed@%n.service`,
+   which pings `vault_backup_failure_url`, and a successful run pings
+   `vault_backup_heartbeat_url` (dead man's switch: the monitor alerts when the ping stops
+   arriving, which also covers a VM that is down or a timer that never fires). Both are
+   optional and generic GETs, so a healthchecks.io-style check and an Uptime Kuma push
+   monitor both work.
+3. **Restores are tested by script.** `scripts/backup-restore-test.sh`
+   (`make backup-restore-test`) decrypts a dump straight into `pg_restore` inside a
+   throwaway PostGIS container and checks that it holds users. It runs where the age private
+   key is (the operator workstation), not on the VM: putting a restore-test identity on the
+   VM would undo the recipient-only rule above, for history that includes erased accounts.
+   It is on demand, or on a local timer with its own heartbeat.
+
+Not addressed: `rclone.conf` stays `root:deploy 0640`. `deploy` is in the `docker` group,
+i.e. root-equivalent, so tighter file modes would not change who can read the key; the
+capability of the key is what limits the damage.

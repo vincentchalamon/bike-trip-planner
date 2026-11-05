@@ -1,0 +1,12 @@
+# {{ ansible_managed }}
+# OnFailure= target of btp-backup.service (%i = the failed unit). Pings
+# backup_failure_url so a failed run alerts now, not only once the heartbeat
+# goes missing. Details: journalctl -u %i.
+[Unit]
+Description=Report the failure of %i
+
+[Service]
+Type=oneshot
+User={{ deploy_user }}
+EnvironmentFile={{ backup_dir }}/backup.env
+ExecStart=/bin/sh -c '[ -z "$${FAILURE_URL}" ] || curl -fsS -m 10 --retry 3 -o /dev/null "$${FAILURE_URL}"'

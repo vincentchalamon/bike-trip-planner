@@ -83,6 +83,7 @@ nav:
           - runbooks/uptime-monitoring.md
           - runbooks/base-image-cve-maintenance.md
           - runbooks/oracle-vm-reclaimed.md
+          - runbooks/backup-restore.md
           - runbooks/secrets-inventory.md
           - runbooks/secrets-rotation.md
           - runbooks/release-checklist.md

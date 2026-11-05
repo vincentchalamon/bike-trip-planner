@@ -34,6 +34,24 @@ backup_keep_daily: 7
 backup_keep_weekly: 4
 backup_keep_monthly: 6
 
+# Who enforces that retention.
+#   "script":    btp-backup.sh prunes with `rclone deletefile`, so the VM key
+#                must be allowed to delete (and can wipe the history).
+#   "lifecycle": the script never deletes; the bucket's lifecycle rules expire
+#                each tier and Object Lock protects it, so the VM key can be an
+#                application key WITHOUT deleteFiles (ADR-062 addendum,
+#                docs/runbooks/backup-restore.md).
+backup_retention_mode: "script"
+
+# Dead man's switch (healthchecks.io-style or an Uptime Kuma push monitor).
+# Their URLs carry a token, so they live in Vault. Empty = no ping.
+#   heartbeat: GET after every successful run; the monitor alerts when it
+#              stops arriving (set its period to a bit more than a day).
+#   failure:   GET from the OnFailure= unit when a backup run fails
+#              (healthchecks: <url>/fail; Kuma: <url>?status=down).
+backup_heartbeat_url: "{{ vault_backup_heartbeat_url | default('') }}"
+backup_failure_url: "{{ vault_backup_failure_url | default('') }}"
+
 # apt packages the backup path needs on the VM.
 backup_packages:
   - age

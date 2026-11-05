@@ -6,6 +6,8 @@
 Description=bike-trip-planner PG-app backup (pg_dump -> age -> rclone)
 After=docker.service
 Requires=docker.service
+# A failed run pings backup_failure_url (if set) instead of failing silently.
+OnFailure=btp-backup-failed@%n.service
 
 [Service]
 Type=oneshot
