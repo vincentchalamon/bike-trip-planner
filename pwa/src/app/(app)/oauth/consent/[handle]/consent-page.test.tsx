@@ -20,12 +20,27 @@ import OAuthConsentPage from "./consent-page";
 const pending = (overrides: Record<string, unknown> = {}) => ({
   handle: "a-handle",
   clientName: "Example Agent",
+  clientIdHost: "agent.example.com",
   scopes: ["trips:read"],
   redirectHost: "agent.example.com",
   redirectsToLoopback: false,
   continueUrl: "/oauth/authorize?response_type=code",
   ...overrides,
 });
+
+function captureNavigation(): { target: () => string | null } {
+  let navigated: string | null = null;
+  Object.defineProperty(window, "location", {
+    value: {
+      origin: "https://app.example.com",
+      set href(value: string) {
+        navigated = value;
+      },
+    },
+    writable: true,
+  });
+  return { target: () => navigated };
+}
 
 describe("OAuthConsentPage", () => {
   beforeEach(() => {
@@ -102,15 +117,7 @@ describe("OAuthConsentPage", () => {
    * could cause is that a decision is already on file.
    */
   it("records the decision before navigating back", async () => {
-    let navigated: string | null = null;
-    Object.defineProperty(window, "location", {
-      value: {
-        set href(value: string) {
-          navigated = value;
-        },
-      },
-      writable: true,
-    });
+    const navigation = captureNavigation();
 
     render(<OAuthConsentPage handle="a-handle" />);
 
@@ -120,8 +127,66 @@ describe("OAuthConsentPage", () => {
       expect(decidePendingConsent).toHaveBeenCalledWith("a-handle", "approve"),
     );
     await waitFor(() =>
-      expect(navigated).toBe("/oauth/authorize?response_type=code"),
+      expect(navigation.target()).toBe("/oauth/authorize?response_type=code"),
     );
+  });
+
+  it.each([
+    ["another origin", "https://evil.example/oauth/authorize?x=1"],
+    ["a protocol-relative URL", "//evil.example/oauth/authorize"],
+    ["another path on this origin", "/account/settings"],
+    ["a lookalike path", "/oauth/authorize-other?x=1"],
+    ["a script URL", "javascript:alert(1)"],
+  ])(
+    "neither records a decision nor navigates to %s",
+    async (_label, continueUrl) => {
+      const navigation = captureNavigation();
+      fetchPendingConsent.mockResolvedValue(pending({ continueUrl }));
+
+      render(<OAuthConsentPage handle="a-handle" />);
+
+      fireEvent.click(await screen.findByTestId("oauth-consent-approve"));
+
+      expect(
+        await screen.findByTestId("oauth-consent-expired"),
+      ).toBeInTheDocument();
+      expect(decidePendingConsent).not.toHaveBeenCalled();
+      expect(navigation.target()).toBeNull();
+    },
+  );
+
+  it("shows the host the client_id was published from", async () => {
+    render(<OAuthConsentPage handle="a-handle" />);
+
+    expect(
+      await screen.findByTestId("oauth-consent-client-host"),
+    ).toHaveTextContent("agent.example.com");
+  });
+
+  /**
+   * The name is whatever the metadata document says; nothing stops it reading like a client
+   * the user trusts. A return address on another domain than the client_id is the visible
+   * tell of that impersonation.
+   */
+  it("warns when the return address is not on the client_id host", async () => {
+    fetchPendingConsent.mockResolvedValue(
+      pending({ redirectHost: "collector.example.net" }),
+    );
+
+    render(<OAuthConsentPage handle="a-handle" />);
+
+    expect(
+      await screen.findByTestId("oauth-consent-redirect-mismatch-warning"),
+    ).toBeInTheDocument();
+  });
+
+  it("does not warn when the return address is on the client_id host", async () => {
+    render(<OAuthConsentPage handle="a-handle" />);
+
+    await screen.findByTestId("oauth-consent");
+    expect(
+      screen.queryByTestId("oauth-consent-redirect-mismatch-warning"),
+    ).not.toBeInTheDocument();
   });
 
   it("does not navigate when the decision could not be recorded", async () => {

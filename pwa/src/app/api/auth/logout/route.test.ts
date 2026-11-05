@@ -45,9 +45,31 @@ describe("POST /api/auth/logout", () => {
     expect(init.headers).toMatchObject({ Authorization: "Bearer jwt-123" });
     // The device session is dropped regardless of the backend outcome.
     expect(jar.set).toHaveBeenCalledWith(
-      "refresh_token",
+      "__Host-refresh_token",
       "",
       expect.objectContaining({ maxAge: 0 }),
+    );
+  });
+
+  it("expires the Mercure subscriber cookie on its own path", async () => {
+    const jar = stubCookieJar();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(null, { status: 204 })),
+    );
+
+    await POST(sameOriginPost({ authorization: "Bearer jwt-123" }));
+
+    // A cookie is only replaced by one with the same name AND path.
+    expect(jar.set).toHaveBeenCalledWith(
+      "__Secure-mercure_access_token",
+      "",
+      expect.objectContaining({
+        path: "/.well-known/mercure",
+        secure: true,
+        httpOnly: true,
+        maxAge: 0,
+      }),
     );
   });
 
@@ -59,7 +81,7 @@ describe("POST /api/auth/logout", () => {
 
     expect(res.status).toBe(204);
     expect(jar.set).toHaveBeenCalledWith(
-      "refresh_token",
+      "__Host-refresh_token",
       "",
       expect.objectContaining({ maxAge: 0 }),
     );

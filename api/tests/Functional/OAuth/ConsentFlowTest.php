@@ -17,6 +17,7 @@ use League\Bundle\OAuth2ServerBundle\ValueObject\Grant;
 use League\Bundle\OAuth2ServerBundle\ValueObject\RedirectUri;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
+use App\Security\AuthCookies;
 use Symfony\Component\BrowserKit\Cookie as BrowserKitCookie;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
 
@@ -82,7 +83,7 @@ final class ConsentFlowTest extends ApiTestCase
         // the flow, which is what a real one does.
         $this->browser = self::createClient();
         $this->browser->getCookieJar()->set(
-            new BrowserKitCookie('refresh_token', self::COOKIE, null, '/', 'localhost'),
+            new BrowserKitCookie(AuthCookies::REFRESH_TOKEN, self::COOKIE, null, '/', 'localhost'),
         );
     }
 
@@ -122,6 +123,7 @@ final class ConsentFlowTest extends ApiTestCase
         $consent = $this->read($handle, $this->jwt)->toArray(false);
 
         self::assertSame('Example Agent', $consent['clientName']);
+        self::assertSame('agent.example.com', $consent['clientIdHost']);
         self::assertSame(['trips:read'], $consent['scopes']);
         self::assertSame('127.0.0.1', $consent['redirectHost']);
         self::assertTrue($consent['redirectsToLoopback']);

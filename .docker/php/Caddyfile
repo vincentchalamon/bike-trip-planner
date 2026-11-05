@@ -187,27 +187,13 @@
             || query({'_rsc': '*'})
             || path('/api/auth/*')`
 
-        # Content-Security-Policy (audit 35.2 SEC-001), scoped to the PWA so the
-        # API docs UI is untouched. Shipped as Report-Only first: it never blocks,
-        # so it carries zero regression risk while the manual recette observes any
-        # violation in the console — then it is promoted to enforce (35.4).
-        # 'unsafe-inline' (script/style) is required by Next.js hydration (no
-        # nonce middleware); blob: by MapLibre web workers. External origins:
-        # Carto/Esri/OSM map tiles + Wikimedia POI images. Plausible/Sentry are
-        # env-gated off here; add their origins to script-src/connect-src when enabled.
-        # `report-uri {$CSP_REPORT_URI:}` is a no-op when the env var is unset
-        # (dev/CI) and collects violations in prod when set to a GlitchTip/Sentry
-        # CSP endpoint, turning the Report-Only phase into a real safety net.
-        header @pwa Content-Security-Policy-Report-Only "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://basemaps.cartocdn.com https://server.arcgisonline.com https://tile.openstreetmap.org https://commons.wikimedia.org; connect-src 'self' https://basemaps.cartocdn.com https://server.arcgisonline.com https://tile.openstreetmap.org; worker-src 'self' blob:; font-src 'self' data:; manifest-src 'self'; report-uri {$CSP_REPORT_URI:}"
-
-        # Enforced CSP (SEC-008): the full policy above stays Report-Only until the
-        # script/style origins are validated with a nonce strategy. This enforced
-        # policy deliberately omits default-src so the fetch directives
-        # (script/style/img/connect/font/worker) stay UNrestricted — otherwise they
-        # would inherit default-src and break Next.js hydration + map tiles. It only
-        # enforces the non-fetch directives, which carry zero regression risk: they
-        # gate framing, plugins, base-uri hijacking and form exfiltration.
-        header @pwa Content-Security-Policy "object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+        # Content-Security-Policy (SEC-14). The enforced policy of the HTML documents,
+        # script-src included, is set by Next.js (pwa/src/proxy.ts): it carries a fresh
+        # nonce per request, which Caddy cannot know. Setting a second script-src here
+        # would be intersected with it, so this one only covers the non-fetch directives,
+        # and only where the PWA did not answer with a policy of its own (`?` = set if
+        # absent): static files, the BFF route handlers, the MapLibre worker scripts.
+        header @pwa ?Content-Security-Policy "object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
 
         # Comment the following line if you don't want Next.js to catch requests for HTML documents.
         # In this case, they will be handled by the PHP app.

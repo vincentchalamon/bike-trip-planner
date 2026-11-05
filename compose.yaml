@@ -346,6 +346,9 @@ services:
       NEXT_PUBLIC_CONTACT_EMAIL: "${CONTACT_EMAIL:-contact@bike-trip-planner.com}"
       SENTRY_DSN: "${SENTRY_DSN:-}"
       APP_RELEASE: "${APP_RELEASE:-}"
+      # Where browsers report CSP violations of the documents (pwa/src/proxy.ts),
+      # e.g. a GlitchTip/Sentry security endpoint. Empty = no report-uri.
+      CSP_REPORT_URI: "${CSP_REPORT_URI:-}"
       # Android App Links (ADR-053): the /.well-known/assetlinks.json route reads
       # these at runtime (force-dynamic). Set once the app package + signing-cert
       # SHA-256 fingerprint exist; empty until then (route serves []).

@@ -13,6 +13,7 @@ use League\Bundle\OAuth2ServerBundle\Manager\ClientManagerInterface;
 use League\Bundle\OAuth2ServerBundle\ValueObject\Grant;
 use League\Bundle\OAuth2ServerBundle\ValueObject\RedirectUri;
 use League\Bundle\OAuth2ServerBundle\ValueObject\Scope;
+use App\Security\AuthCookies;
 use Symfony\Component\BrowserKit\Cookie as BrowserKitCookie;
 
 /**
@@ -74,7 +75,7 @@ trait IssuesOAuthTokensTrait
         }
 
         $browser = self::createClient();
-        $browser->getCookieJar()->set(new BrowserKitCookie('refresh_token', $cookie, null, '/', 'localhost'));
+        $browser->getCookieJar()->set(new BrowserKitCookie(AuthCookies::REFRESH_TOKEN, $cookie, null, '/', 'localhost'));
 
         $handle = $this->pendingHandle($browser, $scopes);
 

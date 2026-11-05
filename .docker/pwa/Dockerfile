@@ -57,6 +57,9 @@ ARG NEXT_PUBLIC_CONTACT_EMAIL=contact@bike-trip-planner.com
 # tree-shakes it out. Set to "true" only where the mocked E2E suite runs (CI in
 # ci.yml, dev in compose.dev.yaml) — the mocked tests run against this prod image.
 ARG NEXT_PUBLIC_ENABLE_TEST_HOOKS=false
+# Self-hosted Plausible (site id + tracker URL). Both empty -> no script, no request.
+ARG NEXT_PUBLIC_PLAUSIBLE_DOMAIN=
+ARG NEXT_PUBLIC_PLAUSIBLE_SRC=
 # Client-facing origins, inlined at build time. Empty API URL → the browser calls
 # the API on the SAME origin it was served from (relative URLs), so the build
 # works unchanged on https://localhost, in prod (PWA + API share the origin), and
@@ -83,6 +86,8 @@ RUN --mount=type=secret,id=sentry_auth_token \
     NEXT_PUBLIC_SENTRY_DSN="${NEXT_PUBLIC_SENTRY_DSN}" \
     NEXT_PUBLIC_CONTACT_EMAIL="${NEXT_PUBLIC_CONTACT_EMAIL}" \
     NEXT_PUBLIC_ENABLE_TEST_HOOKS="${NEXT_PUBLIC_ENABLE_TEST_HOOKS}" \
+    NEXT_PUBLIC_PLAUSIBLE_DOMAIN="${NEXT_PUBLIC_PLAUSIBLE_DOMAIN}" \
+    NEXT_PUBLIC_PLAUSIBLE_SRC="${NEXT_PUBLIC_PLAUSIBLE_SRC}" \
     NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL}" \
     NEXT_PUBLIC_MERCURE_URL="${NEXT_PUBLIC_MERCURE_URL}" \
     npm run build --workspace pwa

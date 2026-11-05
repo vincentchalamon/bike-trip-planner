@@ -1,3 +1,5 @@
+import { REFRESH_COOKIE } from "@/lib/auth/refresh-cookie";
+
 export interface ServerSession {
   authenticated: boolean;
   user: { id: string; email: string } | null;
@@ -25,7 +27,7 @@ export interface ServerSession {
  */
 export async function resolveServerSession(): Promise<ServerSession | null> {
   const { cookies } = await import("next/headers");
-  const token = (await cookies()).get("refresh_token")?.value;
+  const token = (await cookies()).get(REFRESH_COOKIE)?.value;
   if (!token) {
     // No cookie → we cannot VALIDATE anything, so fail-OPEN (`null`) and let the
     // client bootstrap decide, exactly like a backend error. This keeps the
@@ -44,7 +46,7 @@ export async function resolveServerSession(): Promise<ServerSession | null> {
     const res = await fetch(`${backend}/auth/session`, {
       // Forward ONLY the refresh_token — never the whole incoming Cookie header.
       headers: {
-        Cookie: `refresh_token=${token}`,
+        Cookie: `${REFRESH_COOKIE}=${token}`,
         Accept: "application/ld+json",
       },
       cache: "no-store",

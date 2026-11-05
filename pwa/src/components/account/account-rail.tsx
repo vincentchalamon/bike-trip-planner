@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
 import { Loader2, LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/sonner";
@@ -17,7 +16,6 @@ import { useAuthStore } from "@/store/auth-store";
 export function AccountRail() {
   const tNav = useTranslations("navigation");
   const t = useTranslations("accountSettings.logout");
-  const router = useRouter();
   const email = useAuthStore((s) => s.user?.email ?? "");
   const logout = useAuthStore((s) => s.logout);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -27,7 +25,10 @@ export function AccountRail() {
     setIsLoggingOut(true);
     try {
       await logout();
-      router.replace("/");
+      // A full page load, not router.replace(): it is what drops every in-memory
+      // store (trips, stages, Mercure subscriptions) the session had filled.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- the reload is the point
+      window.location.assign("/");
     } catch {
       toast.error(t("logoutFailed"));
     } finally {

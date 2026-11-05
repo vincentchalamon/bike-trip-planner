@@ -51,7 +51,7 @@ describe("POST /api/auth/verify", () => {
     expect(res.status).toBe(200);
     // The refresh token is pinned server-side.
     expect(jar.set).toHaveBeenCalledWith(
-      "refresh_token",
+      "__Host-refresh_token",
       "refresh-abc",
       expect.objectContaining({ httpOnly: true }),
     );
@@ -134,7 +134,7 @@ describe("POST /api/auth/verify", () => {
 
     expect(res.status).toBe(200);
     expect(jar.set).toHaveBeenCalledWith(
-      "refresh_token",
+      "__Host-refresh_token",
       "refresh-abc",
       expect.anything(),
     );

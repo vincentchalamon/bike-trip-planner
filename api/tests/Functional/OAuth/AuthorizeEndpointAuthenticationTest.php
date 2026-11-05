@@ -10,6 +10,7 @@ use App\Security\RefreshTokenEncryptor;
 use App\Tests\ApiTestCase;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
+use App\Security\AuthCookies;
 use Symfony\Component\BrowserKit\Cookie as BrowserKitCookie;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
@@ -103,7 +104,7 @@ final class AuthorizeEndpointAuthenticationTest extends ApiTestCase
         $this->seedUser('owner@example.com', 'owner-token');
 
         $client = self::createClient();
-        $client->getCookieJar()->set(new BrowserKitCookie('refresh_token', 'owner-token', null, '/', 'localhost'));
+        $client->getCookieJar()->set(new BrowserKitCookie(AuthCookies::REFRESH_TOKEN, 'owner-token', null, '/', 'localhost'));
         $client->request('GET', '/trips', ['headers' => ['Accept' => 'application/ld+json']]);
 
         self::assertResponseStatusCodeSame(401);
@@ -117,7 +118,7 @@ final class AuthorizeEndpointAuthenticationTest extends ApiTestCase
             // A raw `Cookie` header never populates $request->cookies; the token has to go
             // through the BrowserKit CookieJar (see AuthSessionTest).
             $client->getCookieJar()->set(
-                new BrowserKitCookie('refresh_token', $cookieToken, null, '/', 'localhost'),
+                new BrowserKitCookie(AuthCookies::REFRESH_TOKEN, $cookieToken, null, '/', 'localhost'),
             );
         }
 

@@ -1048,6 +1048,7 @@
   },
   "oauthConsent": {
     "title": "Authorize this application",
+    "publisherLabel": "Published from",
     "loading": "Loading the request…",
     "goneTitle": "This request is no longer valid",
     "goneDescription": "It expired, was already answered, or is not yours. Start the authorization again from your application.",
@@ -1059,6 +1060,7 @@
     "redirectLabel": "It will be sent back to",
     "redirectUnknown": "address not given",
     "loopbackWarning": "This application runs on your own machine. Nothing can prove it is the one you think it is: only authorize it if you just started it yourself.",
+    "redirectMismatchWarning": "The return address is not on the domain that publishes this application. The name shown is one it chose for itself: only authorize it if you recognise both domains.",
     "approve": "Authorize",
     "deny": "Refuse"
   },

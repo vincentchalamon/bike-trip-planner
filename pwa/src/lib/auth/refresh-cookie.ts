@@ -1,6 +1,11 @@
 import { cookies } from "next/headers";
 
-const REFRESH_COOKIE = "refresh_token";
+/**
+ * `__Host-` pins the cookie to this exact host (Secure, Path=/, no Domain), so a
+ * sibling subdomain cannot plant or overwrite it with a `Domain=` cookie of its own.
+ * Must match App\Security\AuthCookies::REFRESH_TOKEN on the API side.
+ */
+export const REFRESH_COOKIE = "__Host-refresh_token";
 
 /**
  * The refresh token has a 30-day TTL server-side, so the cookie mirrors that

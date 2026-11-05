@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import {
   Card,
@@ -24,7 +23,6 @@ import { useAuthStore } from "@/store/auth-store";
  */
 export function DangerZoneSection() {
   const t = useTranslations("accountSettings.danger");
-  const router = useRouter();
   const logout = useAuthStore((s) => s.logout);
   const [open, setOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -51,7 +49,9 @@ export function DangerZoneSection() {
       // Account is already gone; a failed server logout must not block the redirect.
     } finally {
       setOpen(false);
-      router.replace("/");
+      // Full page load, so no in-memory store outlives the deleted account.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- the reload is the point
+      window.location.assign("/");
     }
   }
 

@@ -30,7 +30,7 @@ describe("refresh-cookie", () => {
     await setRefreshCookie("tok");
 
     expect(jar.set).toHaveBeenCalledWith(
-      "refresh_token",
+      "__Host-refresh_token",
       "tok",
       expect.objectContaining({
         httpOnly: true,
@@ -47,7 +47,7 @@ describe("refresh-cookie", () => {
     await clearRefreshCookie();
 
     expect(jar.set).toHaveBeenCalledWith(
-      "refresh_token",
+      "__Host-refresh_token",
       "",
       expect.objectContaining({
         httpOnly: true,
@@ -63,6 +63,6 @@ describe("refresh-cookie", () => {
     jar.get.mockReturnValue({ value: "tok" });
 
     expect(await readRefreshCookie()).toBe("tok");
-    expect(jar.get).toHaveBeenCalledWith("refresh_token");
+    expect(jar.get).toHaveBeenCalledWith("__Host-refresh_token");
   });
 });
