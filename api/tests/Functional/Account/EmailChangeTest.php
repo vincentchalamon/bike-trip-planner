@@ -8,6 +8,7 @@ use App\Tests\ApiTestCase;
 use App\Tests\Functional\FailingMailerTrait;
 use App\Entity\EmailChangeToken;
 use App\Entity\RefreshToken;
+use App\Security\AuthCookies;
 use App\Security\RefreshTokenEncryptor;
 use Symfony\Component\BrowserKit\Cookie as BrowserKitCookie;
 use App\Entity\User;
@@ -210,7 +211,7 @@ final class EmailChangeTest extends ApiTestCase
         $this->createTokenForUser($user, 'notice-new@example.com', 'notice-change-token');
 
         $client = self::createClient();
-        $client->getCookieJar()->set(new BrowserKitCookie('refresh_token', 'caller-session', null, '/', 'localhost'));
+        $client->getCookieJar()->set(new BrowserKitCookie(AuthCookies::REFRESH_TOKEN, 'caller-session', null, '/', 'localhost'));
         $client->request('POST', '/users/me/email-change/verify', [
             'headers' => ['Content-Type' => 'application/ld+json', 'Authorization' => 'Bearer '.$fixtures['jwt']],
             'json' => ['token' => 'notice-change-token'],
