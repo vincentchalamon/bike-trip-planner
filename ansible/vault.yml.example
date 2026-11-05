@@ -164,3 +164,10 @@ vault_preview_oauth_public_key: |
   -----END PUBLIC KEY-----
 # Optional. Empty = null://null: previews send no email (magic links included).
 vault_preview_mailer_dsn: ""
+
+# Dead man's switch for the backup (docs/runbooks/backup-restore.md). Optional, empty = no
+# ping. heartbeat: pinged after every successful run (a healthchecks.io-style check or an
+# Uptime Kuma push monitor, period ~25 h). failure: pinged by the OnFailure= unit when a
+# run fails (healthchecks: <url>/fail, Uptime Kuma: <push url>?status=down).
+vault_backup_heartbeat_url: ""
+vault_backup_failure_url: ""

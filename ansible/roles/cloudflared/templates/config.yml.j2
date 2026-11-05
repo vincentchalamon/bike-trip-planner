@@ -12,6 +12,12 @@ ingress:
   # www -> Traefik (reached over the shared `edge` docker network).
   - hostname: "www.{{ domain }}"
     service: http://traefik:80
+{% if ssh_tunnel_hostname | length > 0 %}
+  # Cloudflare Access SSH application -> the host sshd, at the edge network
+  # gateway. Before the wildcard: cloudflared takes the first matching rule.
+  - hostname: "{{ ssh_tunnel_hostname }}"
+    service: "ssh://{{ edge_gateway }}:22"
+{% endif %}
   # Wildcard for PR previews (pr-N.${DOMAIN}) -> same Traefik.
   - hostname: "*.{{ domain }}"
     service: http://traefik:80

@@ -35,7 +35,7 @@ The full inventory, with the Vault key of each secret, is in
 | `FCM_SERVICE_ACCOUNT_JSON` | On-compromise | Same. |
 | `SENTRY_DSN` / `SENTRY_AUTH_TOKEN` | On-compromise | The error-tracking project can be recreated. |
 | Cloudflare Tunnel credentials | On-compromise | Recreate the tunnel credentials, update Vault, re-run the playbook. |
-| `SSH_KEY` / `SSH_KNOWN_HOSTS` | On-compromise (key) / on VM host-key change | Two keys, both environment secrets (never repository secrets, which any workflow a branch adds can read). The `production` one (tag-only environment, `deploy` user) is out of reach of pull_request runs. The `preview` one is reachable by them by design, and is pinned to the `btp-preview` forced command. New pair, public key into `deploy_ssh_public_keys` or `preview_deploy_ssh_public_keys`, re-run the playbook; the preview list is exclusive, so a key dropped from it is revoked. |
+| `SSH_KEY` / `SSH_KNOWN_HOSTS` | On-compromise (key) / on VM host-key change | Two keys, both environment secrets (never repository secrets, which any workflow a branch adds can read). The `production` one (tag-only environment, `deploy` user) is out of reach of pull_request runs. The `preview` one is reachable by them by design, and is pinned to the `btp-preview` forced command. New pair, **replace** the old public key with the new one in `deploy_ssh_public_keys` or `preview_deploy_ssh_public_keys`, re-run the playbook. Both lists are exclusive: a key dropped from the list is removed from `authorized_keys`, so the rotation revokes the old key (see "Deploy SSH key" below). |
 | `INCIDENT_DISPATCH_TOKEN` | **90 days** | Fine-grained PAT, see [incident-alerting.md](incident-alerting.md) ("Rotating `INCIDENT_DISPATCH_TOKEN`"). |
 | `CLAUDE_CODE_OAUTH_TOKEN` | Managed by Anthropic | Out of scope. |
 
@@ -116,6 +116,26 @@ rotate `REFRESH_TOKEN_ENC_KEY` (generic procedure); for agents, revoke their gra
 4. Verify: `/api/health` is `ok`, and a full magic-link login works (`POST /auth/request-link`
    answers 202, the emailed link logs you in).
 
+### Deploy SSH key
+
+Both `authorized_keys` files (`deploy`, `preview-deploy`) are written **exclusively** from their
+list: whatever is not in the list is removed. A key added by hand on the VM is therefore removed
+at the next playbook run too. An **empty** list is the exception: the task is skipped and the
+file is left as it is, so always **replace** the last key, never just delete it. To cut a key
+with no replacement (e.g. disable previews), remove it on the VM by hand
+(`sudo truncate -s0 ~preview-deploy/.ssh/authorized_keys`).
+
+1. Generate the new pair offline: `ssh-keygen -t ed25519 -N '' -C 'gha-<env>-YYYYMMDD' -f gha-<env>`.
+2. In `group_vars/all.yml`, **replace** the old public key with the new one in
+   `deploy_ssh_public_keys` (`production`) or `preview_deploy_ssh_public_keys` (`preview`).
+   During a planned rotation you may keep both for one run, then remove the old one and run
+   again; on compromise, replace it straight away.
+3. Update the `SSH_KEY` secret of the matching GitHub environment with the new private key.
+4. Re-run the playbook, then check that the old key is gone:
+   `sudo cat ~deploy/.ssh/authorized_keys` (or `~preview-deploy/`) lists the new key only.
+5. Re-run the last `deploy-prod` (or a preview deploy) to prove the new key works. Destroy the
+   local private key file.
+
 ### `age` recipient
 
 Rotation **does not re-encrypt** the existing backups: too expensive, and the old private key
@@ -141,7 +161,10 @@ still decrypts old dumps as long as it is kept.
 ### B2 application key
 
 1. Backblaze B2 console -> Application Keys -> **Add a New Application Key**, scoped to
-   `btp-backups` only, with `listFiles`, `readFiles`, `writeFiles`, `deleteFiles`.
+   `btp-backups` only, with `listBuckets`, `listFiles`, `readFiles`, `writeFiles`, plus
+   `deleteFiles` **only** while `backup_retention_mode` is `script`. With `lifecycle`
+   (bucket lifecycle rules + Object Lock, [backup-restore.md](backup-restore.md)) the key
+   must not have `deleteFiles`: that is what keeps a VM compromise from erasing the history.
 2. Copy `keyID` and `applicationKey` (shown only once).
 3. Set `vault_b2_account_id` (= keyID) and `vault_b2_application_key`, then re-run the
    playbook (it rewrites `/etc/bike-trip-planner/backup/rclone.conf`). The backup is a

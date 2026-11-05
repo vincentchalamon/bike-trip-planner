@@ -64,6 +64,7 @@ For rotation, see [secrets-rotation.md](secrets-rotation.md).
 | `AGE_RECIPIENT` | `age` public key | `vault_age_recipient` -> `backup.env` | `btp-backup.service` (encrypts the dumps) | On-compromise (only the private key is sensitive) | ADR-062 |
 | `age` private key | `age` private key | **Bitwarden vault** (never on the VM) | Operator, at restore time | On-compromise | ADR-062 |
 | `B2_ACCOUNT_ID` / `B2_APPLICATION_KEY` | Backblaze application key | `vault_b2_account_id`, `vault_b2_application_key` -> `rclone.conf` | `btp-backup.service` (rclone) | **Yearly** + on-compromise | ADR-062 |
+| Backup heartbeat / failure URLs | Monitor URLs carrying a token (optional) | `vault_backup_heartbeat_url`, `vault_backup_failure_url` -> `backup.env` | `btp-backup.service`, `btp-backup-failed@.service` | On-compromise | ADR-062 |
 | OCI Object Storage keys | Customer Secret Key (S3-compatible) | `vault_oci_access_key_id`, `vault_oci_secret_access_key` (+ endpoint, region) -> `rclone.conf` | `btp-backup.service` (rclone, only if `oci` is in `backup_remotes`) | Yearly + on-compromise | ADR-062 |
 
 Non-secret runtime values (`DOMAIN`, `TRUSTED_PROXIES`, `VALHALLA_BASE_URI`,

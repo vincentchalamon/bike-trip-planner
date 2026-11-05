@@ -105,3 +105,17 @@ container. The deploy model changes on four points.
 Not addressed here: GHCR still lets the repository's `GITHUB_TOKEN` write the release packages
 (narrowing that needs a release-only credential), and images are not signed. Digest pinning
 makes both matter for availability only, not for what prod runs.
+
+## Addendum (2026-11-05): SSH is the one public port
+
+"No public port" holds for the web, not for SSH. The deploy jobs run plain `ssh` to
+`SSH_HOST`, so port 22 has to be reachable from GitHub-hosted runners, whose addresses are not
+fixed; an Access SSH application was described but never wired. The VM therefore keeps a public
+IP with 22 open, and the new `hardening` role makes that port cheap to expose: an sshd drop-in
+(keys only, no root, `AllowUsers` limited to the operator and the two deploy users, checked
+with `sshd -t` before any reload), an nftables INPUT filter in its own table that leaves
+Docker's tables alone, and sshguard. `ssh_allowed_cidrs` / `ssh_allow_github_actions` narrow
+the sources, and `ssh_tunnel_hostname` adds the tunnel route for operators. Closing 22
+entirely requires the deploy jobs to go through `cloudflared access ssh` with an Access service
+token; that is a separate change, not made here. Both `authorized_keys` lists are now exclusive,
+so rotating a deploy key revokes the old one.
