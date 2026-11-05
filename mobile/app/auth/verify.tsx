@@ -19,7 +19,7 @@ import { useLinkFragment } from '../../src/auth/link-fragment';
 // not consumed until the user has seen the account it opens (SEC-15).
 export default function VerifyScreen() {
   const token = useLinkFragment();
-  const { verify, authenticated, email } = useAuth();
+  const { ready, verify, authenticated, email } = useAuth();
   const { t } = useTranslation();
   const theme = useTheme();
   const router = useRouter();
@@ -54,13 +54,15 @@ export default function VerifyScreen() {
     [token, verify, router, authenticated, email],
   );
 
+  // Wait for the stored session: on a cold start from the link, verifying before
+  // it is loaded would skip the account-switch protection.
   useEffect(() => {
-    if (handled.current || token.length === 0) {
+    if (!ready || handled.current || token.length === 0) {
       return;
     }
     handled.current = true;
     void run(false);
-  }, [token, run]);
+  }, [ready, token, run]);
 
   // A link without a token cannot be verified: same screen as a rejected one.
   if (failed || token.length === 0) {

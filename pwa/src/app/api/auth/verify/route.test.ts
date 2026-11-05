@@ -122,6 +122,19 @@ describe("POST /api/auth/verify", () => {
     expect(jar.set).not.toHaveBeenCalled();
   });
 
+  it("turns a 409 without a readable email into a 401", async () => {
+    const jar = stubCookieJar();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response("conflict", { status: 409 })),
+    );
+
+    const res = await POST(sameOriginPost({ token: "magic" }));
+
+    expect(res.status).toBe(401);
+    expect(jar.set).not.toHaveBeenCalled();
+  });
+
   it("forwards only a literal confirm: true", async () => {
     stubCookieJar();
     const fetchMock = vi

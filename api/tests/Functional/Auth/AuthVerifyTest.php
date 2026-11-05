@@ -308,7 +308,7 @@ final class AuthVerifyTest extends ApiTestCase
     #[Test]
     public function aDeadLinkIsRefusedBeforeAnyConfirmation(): void
     {
-        $this->createUserWithMagicLink('stale@example.com', 'stale-token', new \DateTimeImmutable('-1 minute'));
+        $this->createUserWithMagicLink('stale@example.com', 'stale-token', new \DateTimeImmutable('-1 day'));
         $user = $this->createUserWithMagicLink('erased@example.com', 'erased-token');
         $user->anonymize();
         $this->getEntityManager()->flush();

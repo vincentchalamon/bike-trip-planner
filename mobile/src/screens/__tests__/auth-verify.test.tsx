@@ -8,7 +8,7 @@ type Renderer = ReturnType<typeof TestRenderer.create>;
 
 const mockReplace = jest.fn();
 const mockVerify = jest.fn();
-const mockAuth = { authenticated: false, email: null as string | null };
+const mockAuth = { ready: true, authenticated: false, email: null as string | null };
 
 jest.mock('expo-router', () => ({ useRouter: () => ({ replace: mockReplace }) }));
 jest.mock('../../auth/link-fragment', () => ({ useLinkFragment: () => 'magic-token' }));
@@ -58,11 +58,29 @@ beforeAll(async () => {
 beforeEach(() => {
   jest.clearAllMocks();
   mockVerify.mockReset();
+  mockAuth.ready = true;
   mockAuth.authenticated = false;
   mockAuth.email = null;
 });
 
 describe('VerifyScreen (SEC-15)', () => {
+  it('waits for the stored session before verifying the link', async () => {
+    mockAuth.ready = false;
+    mockVerify.mockResolvedValue({ kind: 'ok' });
+
+    const renderer = await render();
+
+    expect(mockVerify).not.toHaveBeenCalled();
+
+    mockAuth.ready = true;
+    await act(async () => {
+      renderer.update(<VerifyScreen />);
+      await flush();
+    });
+
+    expect(mockVerify).toHaveBeenCalledTimes(1);
+  });
+
   it('signs in at once when the link was requested from this device', async () => {
     mockVerify.mockResolvedValue({ kind: 'ok' });
 

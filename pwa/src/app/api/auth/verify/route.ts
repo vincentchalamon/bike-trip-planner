@@ -35,8 +35,12 @@ export async function POST(request: Request): Promise<NextResponse> {
   });
 
   if (res.status === 409) {
-    const { email } = (await res.json()) as { email?: string };
-    return NextResponse.json({ email }, { status: 409 });
+    const { email } = (await res.json().catch(() => ({}))) as {
+      email?: string;
+    };
+    return email
+      ? NextResponse.json({ email }, { status: 409 })
+      : new NextResponse(null, { status: 401 });
   }
 
   if (!res.ok) {
