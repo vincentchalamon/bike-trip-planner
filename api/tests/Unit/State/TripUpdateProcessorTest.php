@@ -30,6 +30,9 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Clock\NativeClock;
+use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
+use Symfony\Component\RateLimiter\Storage\InMemoryStorage;
 
 #[AllowMockObjectsWithoutExpectations]
 final class TripUpdateProcessorTest extends TestCase
@@ -42,6 +45,8 @@ final class TripUpdateProcessorTest extends TestCase
 
     private TripUpdateProcessor $processor;
 
+    private User $owner;
+
     #[\Override]
     protected function setUp(): void
     {
@@ -49,8 +54,9 @@ final class TripUpdateProcessorTest extends TestCase
         $this->messageBus = $this->createMock(MessageBusInterface::class);
         $this->computationTracker = $this->createMock(ComputationTrackerInterface::class);
 
+        $this->owner = new User('owner@example.com');
         $security = $this->createStub(Security::class);
-        $security->method('getUser')->willReturn(new User('owner@example.com'));
+        $security->method('getUser')->willReturn($this->owner);
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
         $generationTracker->method('increment')->willReturn(2);
@@ -66,6 +72,8 @@ final class TripUpdateProcessorTest extends TestCase
             new TripLocker(new NativeClock()),
             new TripAnalysisDispatcher($this->messageBus, new EnrichmentMessageFactory()),
             $this->inertSupersession(),
+            $this->limiter(10),
+            new NativeClock(),
         );
     }
 
@@ -138,6 +146,8 @@ final class TripUpdateProcessorTest extends TestCase
             new TripLocker(new NativeClock()),
             new TripAnalysisDispatcher($this->messageBus, new EnrichmentMessageFactory()),
             $this->inertSupersession(),
+            $this->limiter(10),
+            new NativeClock(),
         );
 
         $old = new TripRequest();
@@ -218,6 +228,92 @@ final class TripUpdateProcessorTest extends TestCase
         $this->messageBus->expects($this->never())->method('dispatch');
 
         $this->processor->process($request, new Patch(), ['id' => $tripId], ['previous_data' => clone $request]);
+    }
+
+    #[Test]
+    public function aNewSourceUrlIsThrottledOnTheTripCreationBudget(): void
+    {
+        $limiter = $this->limiter(1);
+        $limiter->create($this->owner->getId()->toRfc4122())->consume();
+
+        $security = $this->createStub(Security::class);
+        $security->method('getUser')->willReturn($this->owner);
+
+        $processor = new TripUpdateProcessor(
+            $this->messageBus,
+            $this->tripStateManager,
+            $this->computationTracker,
+            new ParameterChangeResolver(),
+            $this->createStub(TripGenerationTrackerInterface::class),
+            $security,
+            new TripLocker(new NativeClock()),
+            new TripAnalysisDispatcher($this->messageBus, new EnrichmentMessageFactory()),
+            $this->inertSupersession(),
+            $limiter,
+            new NativeClock(),
+        );
+
+        $before = new TripRequest();
+        $before->sourceUrl = 'https://www.komoot.com/tour/123';
+
+        $after = clone $before;
+        $after->sourceUrl = 'https://www.komoot.com/tour/456';
+
+        // Refused before anything is written or re-fetched.
+        $this->tripStateManager->expects($this->never())->method('storeRequest');
+        $this->messageBus->expects($this->never())->method('dispatch');
+
+        $this->expectException(TooManyRequestsHttpException::class);
+
+        $processor->process($after, new Patch(), ['id' => 'trip-refetch'], ['previous_data' => $before]);
+    }
+
+    #[Test]
+    public function aSettingsEditDoesNotSpendTheRouteFetchBudget(): void
+    {
+        $limiter = $this->limiter(1);
+        $limiter->create($this->owner->getId()->toRfc4122())->consume();
+
+        $security = $this->createStub(Security::class);
+        $security->method('getUser')->willReturn($this->owner);
+        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
+        $generationTracker->method('increment')->willReturn(2);
+
+        $processor = new TripUpdateProcessor(
+            $this->messageBus,
+            $this->tripStateManager,
+            $this->computationTracker,
+            new ParameterChangeResolver(),
+            $generationTracker,
+            $security,
+            new TripLocker(new NativeClock()),
+            new TripAnalysisDispatcher($this->messageBus, new EnrichmentMessageFactory()),
+            $this->inertSupersession(),
+            $limiter,
+            new NativeClock(),
+        );
+
+        $before = new TripRequest();
+        $before->sourceUrl = 'https://www.komoot.com/tour/123';
+
+        $after = clone $before;
+        $after->fatigueFactor = 0.8;
+
+        $this->tripStateManager->method('getRequest')->willReturn($after);
+        $this->computationTracker->method('getStatuses')->willReturn([]);
+        $this->messageBus->method('dispatch')->willReturnCallback(static fn (object $m): Envelope => new Envelope($m));
+
+        $trip = $processor->process($after, new Patch(), ['id' => 'trip-settings'], ['previous_data' => $before]);
+
+        self::assertSame('trip-settings', $trip->id);
+    }
+
+    private function limiter(int $limit): RateLimiterFactory
+    {
+        return new RateLimiterFactory(
+            ['id' => 'trip_create', 'policy' => 'sliding_window', 'limit' => $limit, 'interval' => '60 seconds'],
+            new InMemoryStorage(),
+        );
     }
 
     /**

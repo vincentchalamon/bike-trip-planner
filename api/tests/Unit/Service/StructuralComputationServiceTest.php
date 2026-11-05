@@ -77,6 +77,43 @@ final class StructuralComputationServiceTest extends TestCase
     }
 
     #[Test]
+    public function aDistanceDerivedDayCountIsCappedAtTheMaximumTripLength(): void
+    {
+        // Points scattered across the globe: the distance alone would ask for millions of days.
+        $request = new TripRequest();
+
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $points = $this->createStub(TransientTripPointsStoreInterface::class);
+        $points->method('getDecimatedPoints')->willReturn([
+            ['lat' => -89.0, 'lon' => 0.0, 'ele' => 0.0],
+            ['lat' => 89.0, 'lon' => 0.0, 'ele' => 0.0],
+        ]);
+        $points->method('getRawPoints')->willReturn(null);
+        $tripStateManager->method('getSourceType')->willReturn(SourceType::GPX_UPLOAD->value);
+
+        $distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
+        $distanceCalculator->method('calculateTotalDistance')->willReturn(4_000_000_000.0);
+
+        $pacingEngine = $this->createMock(PacingEngineInterface::class);
+        $pacingEngine->expects($this->once())
+            ->method('generateStages')
+            ->with($this->anything(), $this->anything(), TripRequest::MAX_TRIP_DAYS)
+            ->willReturn([]);
+
+        $service = new StructuralComputationService(
+            $tripStateManager,
+            $points,
+            $distanceCalculator,
+            $this->createStub(ElevationCalculatorInterface::class),
+            $this->createStub(RouteSimplifierInterface::class),
+            $pacingEngine,
+            $this->createStub(TripStageStoreInterface::class),
+        );
+
+        $service->generateStages('trip-1', $request);
+    }
+
+    #[Test]
     public function pacingPathUsesDateRangeForNumberOfDays(): void
     {
         $coordinate = new Coordinate(48.8566, 2.3522, 35.0);

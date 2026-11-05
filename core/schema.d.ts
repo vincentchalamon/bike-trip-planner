@@ -5258,6 +5258,15 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Rate limit reached */
+            429: {
+                headers: {
+                    /** @description Seconds to wait before the limit lets the call through again. */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     api_trips_idanalyze_post: {
@@ -5331,6 +5340,15 @@ export interface operations {
             /** @description This trip has started; its contents can no longer be rewritten. The refusal is permanent — a start date never moves back into the future. */
             423: {
                 headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit reached */
+            429: {
+                headers: {
+                    /** @description Seconds to wait before the limit lets the call through again. */
+                    "Retry-After"?: number;
                     [name: string]: unknown;
                 };
                 content?: never;

@@ -143,6 +143,7 @@ use App\ApiResource\Mcp\ListTripsInput;
                     404 => new Response(description: 'Trip not found'),
                     409 => new Response(description: 'An analysis is already in progress'),
                     422 => new Response(description: 'Trip has no stages to analyze'),
+                    429 => new Response(description: 'Rate limit reached', headers: new \ArrayObject(RetryAfter::HEADERS)),
                 ],
                 summary: 'Trigger the full enrichment pipeline (POIs, weather, terrain, …) for a trip whose stages have been pre-computed.',
             ),
@@ -176,6 +177,12 @@ use App\ApiResource\Mcp\ListTripsInput;
         new Patch(
             uriTemplate: '/trips/{id}{._format}',
             status: 202,
+            openapi: new Operation(
+                responses: [
+                    // A new sourceUrl re-fetches the route, on the trip-creation budget.
+                    429 => new Response(description: 'Rate limit reached', headers: new \ArrayObject(RetryAfter::HEADERS)),
+                ],
+            ),
             security: "is_granted('TRIP_EDIT', object)",
             input: TripRequest::class,
             mercure: true,

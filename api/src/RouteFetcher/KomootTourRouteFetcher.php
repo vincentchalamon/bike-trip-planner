@@ -43,6 +43,7 @@ final readonly class KomootTourRouteFetcher implements RouteFetcherInterface
 
             $response = $this->komootClient->request('GET', \sprintf('/tour/%s', $tourId), [
                 'headers' => ['Accept' => 'text/html'],
+                'on_progress' => RouteResponseSize::guard(),
             ]);
 
             $statusCode = $response->getStatusCode();

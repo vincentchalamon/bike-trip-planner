@@ -11,6 +11,7 @@ use App\Message\FetchAndParseRoute;
 use App\Message\GenerateStages;
 use App\Repository\TransientTripPointsStoreInterface;
 use App\RouteFetcher\RouteFetcherRegistryInterface;
+use App\RouteParser\RouteTooLargeException;
 use App\Service\TripBootstrapper;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
@@ -57,6 +58,12 @@ final readonly class FetchAndParseRouteHandler extends AbstractTripMessageHandle
                     'source' => LogRedactor::url($sourceUrl),
                     'error' => LogRedactor::text($runtimeException->getMessage()),
                 ]);
+                if ($runtimeException instanceof RouteTooLargeException || $runtimeException->getPrevious() instanceof RouteTooLargeException) {
+                    $this->publisher->publishValidationError($tripId, 'ROUTE_TOO_LARGE', 'The route is too large to be planned as one trip.');
+
+                    return;
+                }
+
                 $this->publisher->publishValidationError($tripId, 'ROUTE_FETCH_FAILED', 'The route could not be fetched. Please check the URL and try again.');
 
                 return;
@@ -72,6 +79,12 @@ final readonly class FetchAndParseRouteHandler extends AbstractTripMessageHandle
 
             if ([] === $allPoints) {
                 $this->publisher->publishValidationError($tripId, 'EMPTY_ROUTE', 'Empty route.');
+
+                return;
+            }
+
+            if (\count($allPoints) > RouteTooLargeException::MAX_POINTS) {
+                $this->publisher->publishValidationError($tripId, 'ROUTE_TOO_LARGE', 'The route is too large to be planned as one trip.');
 
                 return;
             }

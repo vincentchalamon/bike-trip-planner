@@ -60,6 +60,14 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 'interval' => '60 seconds',
                 'cache_pool' => 'cache.rate_limiter',
             ],
+            // Analyze queues the whole enrichment pipeline onto the shared workers. Per user,
+            // not per trip: owning several trips must not multiply the budget.
+            'trip_analyze' => [
+                'policy' => 'sliding_window',
+                'limit' => 10,
+                'interval' => '60 seconds',
+                'cache_pool' => 'cache.rate_limiter',
+            ],
             // Geocoding proxies to the public Nominatim instance (1 req/s policy,
             // IP bans for bulk use); cap per user to protect the shared app IP
             // (geocode rate-limit — 2026-07 security audit).

@@ -18,6 +18,7 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Psr\Clock\ClockInterface;
 use App\RateLimiter\RetryAfter;
+use App\RouteParser\RouteTooLargeException;
 use Symfony\Component\DependencyInjection\Attribute\Target;
 
 /**
@@ -72,8 +73,34 @@ final readonly class GpxUploadController
             return ProblemResponse::create(Response::HTTP_BAD_REQUEST, 'Failed to read uploaded file.');
         }
 
+        /** @var User $user */
+        $user = $this->security->getUser();
+
+        // GPX upload is a second trip-creation entry point: throttle it per user like
+        // POST /trips (SEC-006). Consumed before the parse, which is the expensive part: a
+        // throttled client must not get a full parse of a 30 MB body for every request.
+        // The cheap checks above stay unthrottled.
+        $limit = $this->gpxUploadLimiter->create($user->getId()->toRfc4122())->consume();
+        if (!$limit->isAccepted()) {
+            return ProblemResponse::create(
+                Response::HTTP_TOO_MANY_REQUESTS,
+                'Too many GPX uploads. Try again later.',
+                ['Retry-After' => (string) RetryAfter::seconds($limit, $this->clock)],
+            );
+        }
+
+        $tripRequest = new TripRequest();
+        $this->applyOptionalParameters($tripRequest, $request);
+
+        // The DTO's own bound; this controller bypasses API Platform validation.
+        if ($tripRequest->exceedsMaxDuration()) {
+            return ProblemResponse::create(Response::HTTP_UNPROCESSABLE_ENTITY, \sprintf('A trip cannot last more than %d days.', TripRequest::MAX_TRIP_DAYS));
+        }
+
         try {
             $points = $this->gpxUploadService->parseGpx($content);
+        } catch (RouteTooLargeException $routeTooLargeException) {
+            return ProblemResponse::create(Response::HTTP_UNPROCESSABLE_ENTITY, 'Invalid GPX file: '.$routeTooLargeException->getMessage());
         } catch (\RuntimeException $runtimeException) {
             // Swallowed without a trace until now: a malformed upload was indistinguishable
             // from a parser regression in the logs, because there were no logs.
@@ -87,25 +114,6 @@ final readonly class GpxUploadController
         }
 
         $title = $this->gpxUploadService->extractTitle($content);
-
-        $tripRequest = new TripRequest();
-        $this->applyOptionalParameters($tripRequest, $request);
-
-        /** @var User $user */
-        $user = $this->security->getUser();
-
-        // GPX upload is a second trip-creation entry point: throttle it per user like
-        // POST /trips, just before the expensive createTrip, so it cannot be scripted
-        // to exhaust storage/workers (SEC-006). Cheap early validation 4xx are not
-        // throttled (and need no authenticated user).
-        $limit = $this->gpxUploadLimiter->create($user->getId()->toRfc4122())->consume();
-        if (!$limit->isAccepted()) {
-            return ProblemResponse::create(
-                Response::HTTP_TOO_MANY_REQUESTS,
-                'Too many GPX uploads. Try again later.',
-                ['Retry-After' => (string) RetryAfter::seconds($limit, $this->clock)],
-            );
-        }
 
         $result = $this->gpxUploadService->createTrip($points, $title, $tripRequest, $user->getLocale(), $user);
 
@@ -182,13 +190,14 @@ final readonly class GpxUploadController
             }
         }
 
-        /** @var list<string> $enabledAccommodationTypes */
+        // A form field can nest (`enabledAccommodationTypes[0][]=x`), so an entry is not
+        // necessarily a string.
         $enabledAccommodationTypes = $request->request->all('enabledAccommodationTypes');
         if ([] !== $enabledAccommodationTypes) {
             $allowed = TripRequest::ALL_ACCOMMODATION_TYPES;
             $filtered = array_values(array_filter(
                 $enabledAccommodationTypes,
-                static fn (string $type): bool => \in_array($type, $allowed, true),
+                static fn (mixed $type): bool => \is_string($type) && \in_array($type, $allowed, true),
             ));
             if ([] !== $filtered) {
                 $tripRequest->enabledAccommodationTypes = $filtered;

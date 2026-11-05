@@ -18,10 +18,12 @@ final class StageManualAccommodationRequest
 {
     #[ApiProperty(description: 'Accommodation title (required).')]
     #[Assert\NotBlank]
+    #[Assert\Length(max: 255)]
     public string $name = '';
 
     #[ApiProperty(description: 'Postal address (required); geocoded backend-side into coordinates.')]
     #[Assert\NotBlank]
+    #[Assert\Length(max: 500)]
     public string $address = '';
 
     #[ApiProperty(description: 'Optional total price in euros. Maps to estimatedPriceMin = estimatedPriceMax with isExactPrice = true.')]

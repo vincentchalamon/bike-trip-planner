@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 namespace App\ApiResource\Model;
 
+use Symfony\Component\Validator\Constraints as Assert;
+
 final readonly class Coordinate
 {
     public function __construct(
+        #[Assert\Range(min: -90, max: 90)]
         public float $lat,
+        #[Assert\Range(min: -180, max: 180)]
         public float $lon,
         public float $ele = 0.0,
     ) {

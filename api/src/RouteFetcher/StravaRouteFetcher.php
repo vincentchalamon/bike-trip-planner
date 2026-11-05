@@ -48,7 +48,9 @@ final readonly class StravaRouteFetcher implements RouteFetcherInterface
         return $this->routeCache->get($cacheKey, function (ItemInterface $item) use ($routeId): RouteFetchResult {
             $item->expiresAfter(86400);
 
-            $response = $this->stravaClient->request('GET', \sprintf('/routes/%s/export_gpx', $routeId));
+            $response = $this->stravaClient->request('GET', \sprintf('/routes/%s/export_gpx', $routeId), [
+                'on_progress' => RouteResponseSize::guard(),
+            ]);
 
             $statusCode = $response->getStatusCode();
 

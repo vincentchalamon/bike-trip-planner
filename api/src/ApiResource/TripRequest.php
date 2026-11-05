@@ -13,6 +13,7 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
 use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
 /**
  * Input DTO and persistent entity for {@see Trip}.
@@ -38,6 +39,15 @@ final class TripRequest
 
     /** Riding speed (km/h) when the trip says nothing else. */
     public const float DEFAULT_AVERAGE_SPEED = 15.0;
+
+    /** Length of the title column: imported route names are cut to it. */
+    public const int TITLE_MAX_LENGTH = 255;
+
+    /**
+     * Longest trip the pacing accepts, in days. The pacing loops once per day, so an unbounded
+     * date range is an unbounded amount of work per request.
+     */
+    public const int MAX_TRIP_DAYS = 365;
 
     #[ORM\Id]
     #[ORM\Column(type: 'uuid')]
@@ -127,8 +137,8 @@ final class TripRequest
 
     // --- Persistence-only fields (not exposed in API input/output) ---
 
-    #[ORM\Column(length: 255, nullable: true)]
-    #[Assert\Length(max: 255)]
+    #[ORM\Column(length: self::TITLE_MAX_LENGTH, nullable: true)]
+    #[Assert\Length(max: self::TITLE_MAX_LENGTH)]
     #[ApiProperty(readable: false)]
     public ?string $title = null;
 
@@ -247,6 +257,28 @@ final class TripRequest
             }
 
             return $value;
+        }
+    }
+
+    /** Day count is inclusive of both ends, as the pacing counts it. */
+    public function exceedsMaxDuration(): bool
+    {
+        if (!$this->startDate instanceof \DateTimeImmutable || !$this->endDate instanceof \DateTimeImmutable) {
+            return false;
+        }
+
+        return (int) $this->startDate->diff($this->endDate)->days + 1 > self::MAX_TRIP_DAYS;
+    }
+
+    // Both groups: creation validates `trip_request:create` alone, and a create is where a
+    // date range is most often sent.
+    #[Assert\Callback(groups: ['Default', 'trip_request:create'])]
+    public function validateDuration(ExecutionContextInterface $context): void
+    {
+        if ($this->exceedsMaxDuration()) {
+            $context->buildViolation(\sprintf('A trip cannot last more than %d days.', self::MAX_TRIP_DAYS))
+                ->atPath('endDate')
+                ->addViolation();
         }
     }
 
