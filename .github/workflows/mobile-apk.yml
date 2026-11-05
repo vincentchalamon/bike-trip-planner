@@ -2,10 +2,10 @@ name: Mobile APK
 
 # Builds the Android APK and attaches it to the GitHub Release as
 # bike-trip-planner.apk. Kept out of deploy.yml on purpose: the mobile app is not
-# dockerized and is not part of the server deploy (ADR-053). Debug-signed release
-# build (the Expo template's default release signingConfig uses the deterministic
-# debug keystore), so no signing secret is required. For a real release keystore,
-# see docs/runbooks/mobile-release-build.md.
+# dockerized and is not part of the server deploy (ADR-053). Signed with the
+# private release keystore held in the `release` environment's secrets (injected
+# by mobile/plugins/withReleaseSigning.js); the job fails without them rather than
+# falling back to the public debug keystore. See docs/runbooks/mobile-release-build.md.
 on:
   release:
     types: [published]
@@ -26,6 +26,8 @@ jobs:
   build-apk:
     name: Build and attach bike-trip-planner.apk
     runs-on: ubuntu-latest
+    # Protected environment: the keystore secrets are only readable from here.
+    environment: release
     env:
       TAG: ${{ github.event.release.tag_name || inputs.tag }}
       # Inlined into the JS bundle at build time; the app fails closed without
@@ -62,9 +64,50 @@ jobs:
         working-directory: mobile
         run: npx expo prebuild --platform android --no-install
 
-      - name: Assemble the release APK (debug-signed)
+      - name: Decode the release keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          for var in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            if [ -z "${!var}" ]; then
+              echo "::error::Secret $var is missing from the 'release' environment; refusing to build a debug-signed APK."
+              exit 1
+            fi
+          done
+          keystore="$RUNNER_TEMP/release.keystore"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$keystore"
+          echo "ANDROID_KEYSTORE_PATH=$keystore" >> "$GITHUB_ENV"
+
+      - name: Assemble the release APK (release-signed)
         working-directory: mobile/android
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: ./gradlew assembleRelease --no-daemon
+
+      - name: Verify the APK is signed with the release keystore
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          # The Expo/React Native template's public debug keystore.
+          debug_fp="FAC61745DC0903786FB9EDE62A962B399F7348F0BB6F899B8332667591033B9C"
+          expected=$(keytool -J-Duser.language=en -list -v -keystore "$ANDROID_KEYSTORE_PATH" \
+            -storepass:env ANDROID_KEYSTORE_PASSWORD -alias "$ANDROID_KEY_ALIAS" \
+            | awk '/SHA256:/ {print $2}' | tr -d ':' | tr '[:lower:]' '[:upper:]')
+          apksigner=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)/apksigner
+          actual=$("$apksigner" verify --print-certs mobile/android/app/build/outputs/apk/release/app-release.apk \
+            | awk -F': ' '/certificate SHA-256 digest/ {print $NF}' | sort -u | tr '[:lower:]' '[:upper:]')
+          echo "Release keystore SHA-256: $expected"
+          echo "APK signer SHA-256:       $actual"
+          if [ -z "$actual" ] || [ "$actual" = "$debug_fp" ] || [ "$actual" != "$expected" ]; then
+            echo "::error::The APK is not signed with the release keystore."
+            exit 1
+          fi
 
       - name: Rename the APK
         run: |

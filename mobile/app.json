@@ -58,7 +58,8 @@
           "isAndroidBackgroundLocationEnabled": false,
           "isAndroidForegroundServiceEnabled": false
         }
-      ]
+      ],
+      "./plugins/withReleaseSigning"
     ]
   }
 }
