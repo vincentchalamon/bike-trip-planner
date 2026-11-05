@@ -42,6 +42,13 @@ class MagicLink
          * uninitialized and throwing on read.
          */
         private ?string $plainToken = null,
+        /**
+         * SHA-256 of the secret the requesting client keeps (web: a BFF cookie, mobile:
+         * SecureStore). Null when no client asked for the link (CLI invitation). Only a
+         * verify carrying the matching secret signs in without a confirmation (SEC-15).
+         */
+        #[ORM\Column(length: 64, nullable: true)]
+        private ?string $nonceHash = null,
     ) {
         $this->id = $id ?? Uuid::v7();
         $this->createdAt = new \DateTimeImmutable();
@@ -54,6 +61,11 @@ class MagicLink
         // uninitialized; `??` yields null instead of throwing (SEC-003).
         // @phpstan-ignore nullCoalesce.unnecessary (PHPStan cannot model newInstanceWithoutConstructor)
         return $this->plainToken ?? null;
+    }
+
+    public function isBoundTo(?string $nonce): bool
+    {
+        return null !== $this->nonceHash && null !== $nonce && hash_equals($this->nonceHash, hash('sha256', $nonce));
     }
 
     public function getId(): Uuid

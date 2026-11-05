@@ -15,6 +15,9 @@ use Zenstruck\Foundry\Attribute\ResetDatabase;
 #[ResetDatabase]
 final class AuthVerifyTest extends ApiTestCase
 {
+    /** The secret of the client that asked for the link (SEC-15). */
+    private const string NONCE = 'requesting-client-secret-0123456789abcdef';
+
     #[\Override]
     protected static ?bool $alwaysBootKernel = false;
 
@@ -37,7 +40,7 @@ final class AuthVerifyTest extends ApiTestCase
 
         /** @var MagicLinkRepository $repo */
         $repo = self::getContainer()->get(MagicLinkRepository::class);
-        $magicLink = $repo->issue($user);
+        $magicLink = $repo->issue($user, self::NONCE);
         self::assertInstanceOf(MagicLink::class, $magicLink);
         $plainToken = $magicLink->getPlainToken();
         self::assertIsString($plainToken);
@@ -45,7 +48,7 @@ final class AuthVerifyTest extends ApiTestCase
 
         $response = self::createClient()->request('POST', '/auth/verify', [
             'headers' => ['Content-Type' => 'application/ld+json'],
-            'json' => ['token' => $plainToken],
+            'json' => ['token' => $plainToken, 'nonce' => self::NONCE],
         ]);
 
         $this->assertResponseIsSuccessful();
@@ -56,6 +59,7 @@ final class AuthVerifyTest extends ApiTestCase
         string $email = 'test@example.com',
         string $token = 'valid-token-abc123',
         ?\DateTimeImmutable $expiresAt = null,
+        ?string $nonce = self::NONCE,
     ): User {
         $em = $this->getEntityManager();
         $user = new User($email);
@@ -66,6 +70,7 @@ final class AuthVerifyTest extends ApiTestCase
             // Stored hashed at rest (SEC-003); the plaintext is what /auth/verify receives.
             hash('sha256', $token),
             $expiresAt ?? new \DateTimeImmutable('+30 minutes'),
+            nonceHash: null === $nonce ? null : hash('sha256', $nonce),
         );
         $em->persist($magicLink);
         $em->flush();
@@ -80,7 +85,7 @@ final class AuthVerifyTest extends ApiTestCase
 
         $response = self::createClient()->request('POST', '/auth/verify', [
             'headers' => ['Content-Type' => 'application/ld+json'],
-            'json' => ['token' => 'my-valid-token'],
+            'json' => ['token' => 'my-valid-token', 'nonce' => self::NONCE],
         ]);
 
         $this->assertResponseStatusCodeSame(200);
@@ -105,7 +110,7 @@ final class AuthVerifyTest extends ApiTestCase
 
         $response = self::createClient()->request('POST', '/auth/verify', [
             'headers' => ['Content-Type' => 'application/ld+json'],
-            'json' => ['token' => 'body-test-token'],
+            'json' => ['token' => 'body-test-token', 'nonce' => self::NONCE],
         ]);
 
         $this->assertResponseStatusCodeSame(200);
@@ -130,7 +135,7 @@ final class AuthVerifyTest extends ApiTestCase
 
         self::createClient()->request('POST', '/auth/verify', [
             'headers' => ['Content-Type' => 'application/ld+json'],
-            'json' => ['token' => 'expired-token'],
+            'json' => ['token' => 'expired-token', 'nonce' => self::NONCE],
         ]);
 
         $this->assertResponseStatusCodeSame(401);
@@ -157,14 +162,14 @@ final class AuthVerifyTest extends ApiTestCase
         // First request consumes the token
         $client->request('POST', '/auth/verify', [
             'headers' => ['Content-Type' => 'application/ld+json'],
-            'json' => ['token' => 'consume-me-token'],
+            'json' => ['token' => 'consume-me-token', 'nonce' => self::NONCE],
         ]);
         $this->assertResponseStatusCodeSame(200);
 
         // Second request should fail
         $client->request('POST', '/auth/verify', [
             'headers' => ['Content-Type' => 'application/ld+json'],
-            'json' => ['token' => 'consume-me-token'],
+            'json' => ['token' => 'consume-me-token', 'nonce' => self::NONCE],
         ]);
         $this->assertResponseStatusCodeSame(401);
     }
@@ -198,7 +203,7 @@ final class AuthVerifyTest extends ApiTestCase
 
         $response = self::createClient()->request('POST', '/auth/verify', [
             'headers' => ['Content-Type' => 'application/ld+json'],
-            'json' => ['token' => 'jwt-format-token'],
+            'json' => ['token' => 'jwt-format-token', 'nonce' => self::NONCE],
         ]);
 
         $this->assertResponseStatusCodeSame(200);
@@ -223,12 +228,95 @@ final class AuthVerifyTest extends ApiTestCase
 
         $response = self::createClient()->request('POST', '/auth/verify', [
             'headers' => ['Content-Type' => 'application/ld+json'],
-            'json' => ['token' => 'deleted-account-token'],
+            'json' => ['token' => 'deleted-account-token', 'nonce' => self::NONCE],
         ]);
 
         $this->assertResponseStatusCodeSame(401);
 
         // No session must be established for a deleted account: no refresh token.
         $this->assertArrayNotHasKey('refresh_token', $response->toArray(false));
+    }
+
+    /**
+     * @param array<string, mixed> $json
+     *
+     * @return array{status: int, body: array<string, mixed>}
+     */
+    private function verify(array $json): array
+    {
+        $response = self::createClient()->request('POST', '/auth/verify', [
+            'headers' => ['Content-Type' => 'application/ld+json'],
+            'json' => $json,
+        ]);
+
+        return ['status' => $response->getStatusCode(), 'body' => $response->toArray(false)];
+    }
+
+    /**
+     * SEC-15: a link opened without the requesting client's secret names the account it
+     * opens and consumes nothing, so the user can still decide, and the right client can
+     * still sign in with it.
+     */
+    #[Test]
+    public function verifyWithoutTheNonceAsksForAConfirmationAndConsumesNothing(): void
+    {
+        $this->createUserWithMagicLink('target@example.com', 'no-nonce-token');
+
+        $asked = $this->verify(['token' => 'no-nonce-token']);
+        self::assertSame(409, $asked['status']);
+        self::assertSame(['email' => 'target@example.com'], $asked['body']);
+
+        self::assertSame(200, $this->verify(['token' => 'no-nonce-token', 'nonce' => self::NONCE])['status']);
+    }
+
+    #[Test]
+    public function verifyWithAnotherClientsNonceAsksForAConfirmation(): void
+    {
+        $this->createUserWithMagicLink('other@example.com', 'wrong-nonce-token');
+
+        $asked = $this->verify(['token' => 'wrong-nonce-token', 'nonce' => str_repeat('x', 40)]);
+
+        self::assertSame(409, $asked['status']);
+        self::assertArrayNotHasKey('token', $asked['body']);
+        self::assertArrayNotHasKey('refresh_token', $asked['body']);
+    }
+
+    #[Test]
+    public function aConfirmedVerifySignsInOnceWithoutTheNonce(): void
+    {
+        $this->createUserWithMagicLink('confirmed@example.com', 'confirm-token');
+
+        $first = $this->verify(['token' => 'confirm-token', 'confirm' => true]);
+        self::assertSame(200, $first['status']);
+        self::assertArrayHasKey('refresh_token', $first['body']);
+
+        // Still single-use: the confirmation does not reopen a consumed link.
+        self::assertSame(401, $this->verify(['token' => 'confirm-token', 'confirm' => true])['status']);
+    }
+
+    /** A CLI invitation was asked for by no client, so it always confirms. */
+    #[Test]
+    public function anUnboundLinkAlwaysAsksForAConfirmation(): void
+    {
+        $this->createUserWithMagicLink('invited@example.com', 'invitation-token', nonce: null);
+
+        self::assertSame(409, $this->verify(['token' => 'invitation-token', 'nonce' => self::NONCE])['status']);
+        self::assertSame(200, $this->verify(['token' => 'invitation-token', 'confirm' => true])['status']);
+    }
+
+    /** The confirmation step must not name an account the link cannot open. */
+    #[Test]
+    public function aDeadLinkIsRefusedBeforeAnyConfirmation(): void
+    {
+        $this->createUserWithMagicLink('stale@example.com', 'stale-token', new \DateTimeImmutable('-1 minute'));
+        $user = $this->createUserWithMagicLink('erased@example.com', 'erased-token');
+        $user->anonymize();
+        $this->getEntityManager()->flush();
+
+        foreach (['stale-token', 'erased-token', 'unknown-token'] as $token) {
+            $refused = $this->verify(['token' => $token]);
+            self::assertSame(401, $refused['status'], $token);
+            self::assertArrayNotHasKey('email', $refused['body'], $token);
+        }
     }
 }

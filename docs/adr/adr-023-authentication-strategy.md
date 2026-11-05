@@ -185,6 +185,42 @@ Full OAuth2 authorization server (e.g., league/oauth2-server-bundle).
 > from the address bar, and POSTs it exactly as before, so the verify endpoints did not
 > change. Those pages also send `Referrer-Policy: no-referrer`.
 
+> **The link is bound to the client that asked for it (2026-11 security audit, SEC-15).**
+> A magic link used to sign in whoever opened it, silently. Anyone could therefore request
+> a link for their own account and get someone else to open it: the victim would then
+> work, unaware, in the sender's account, which sees every trip they add. The verify
+> endpoint now tells the two cases apart.
+>
+> - At `POST /auth/request-link` the client sends a `nonce`, a random secret it keeps:
+>   the web BFF in an HttpOnly, Secure, SameSite=Lax `__Host-login_nonce` cookie
+>   (30 minutes, reused while present, since no second link is issued while one is
+>   pending), the native client in `expo-secure-store`. The backend stores only its
+>   SHA-256 (`magic_link.nonce_hash`). The client sends the secret rather than its hash
+>   because React Native has no WebCrypto digest; a request body is never logged, so
+>   hashing on the client would protect nothing more.
+> - `POST /auth/verify` signs in at once only when it carries that `nonce`. Otherwise
+>   (another browser, another device, a forwarded link, a CLI invitation, which no
+>   client asked for) it consumes nothing and answers **409 `{ email }`**. The client
+>   shows that address and replays with `confirm: true` if the user goes on. A dead
+>   link stays a 401 and never reveals an address.
+> - A confirmation screen, not a refusal. Requesting a link on a laptop and opening it
+>   on a phone is a normal use of a magic link, and a hard refusal would break it. Once
+>   the account is named on screen, the silent switch the attack relies on is gone. Its
+>   one remaining form is a user who reads an address that is not theirs and continues
+>   anyway, which the warning copy addresses. The email shown is no leak: the link is
+>   only in that mailbox.
+> - The native client never presents its nonce while a session is open, so any link
+>   opened on a signed-in device asks first (a link for the account already signed in
+>   is left unconsumed). An accepted switch runs the full logout before storing the
+>   new tokens: push token unregistered, `POST /auth/logout` (refresh tokens revoked),
+>   offline cache and scheduled local reminders purged.
+>
+> The native logout now calls `POST /auth/logout` too, which revokes every refresh
+> token of the account, as the web logout already did.
+>
+> The single-use rule and the request-link rate limits are unchanged: consumption is
+> still the one conditional `UPDATE`, run only after the binding check passes.
+
 ### Uniform Response Policy
 
 All requests to the magic link generation endpoint return the same `202 Accepted` response with a neutral message ("If this email is registered, a login link has been sent"), regardless of:

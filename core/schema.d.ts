@@ -1137,10 +1137,26 @@ export interface components {
             /** Format: email */
             email: string;
             token?: string;
+            /**
+             * @description Secret the client keeps between request-link and verify (SEC-15). Sent with the
+             *     request, it binds the link to this client; sent with the verify, it proves the
+             *     link is opened where it was asked for.
+             */
+            nonce?: string | null;
+            /** @description The user saw the account email and chose to sign in to it anyway. */
+            confirm?: boolean;
         };
         "Auth-validation.auth.verify": {
             email?: string;
             token: string;
+            /**
+             * @description Secret the client keeps between request-link and verify (SEC-15). Sent with the
+             *     request, it binds the link to this client; sent with the verify, it proves the
+             *     link is opened where it was asked for.
+             */
+            nonce?: string | null;
+            /** @description The user saw the account email and chose to sign in to it anyway. */
+            confirm?: boolean;
         };
         "Auth.AuthSession.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
             authenticated?: boolean;
@@ -3306,6 +3322,17 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description The link was not requested by this client: nothing was consumed, and signing in needs `confirm: true` once the user has seen the account email */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        email?: string;
+                    };
+                };
             };
             /** @description An error occurred */
             422: {

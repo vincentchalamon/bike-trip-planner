@@ -79,7 +79,7 @@ final readonly class AuthRequestLinkProcessor implements ProcessorInterface
             return new JsonResponse(['message' => $neutralMessage], Response::HTTP_ACCEPTED);
         }
 
-        $magicLink = $this->magicLinkRepository->issue($user);
+        $magicLink = $this->magicLinkRepository->issue($user, $data->nonce);
 
         if (!$magicLink instanceof MagicLink) {
             $this->logger->debug('Auth request-link active link already exists', ['user' => $user->getId()->toRfc4122()]);

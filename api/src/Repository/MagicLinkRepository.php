@@ -32,8 +32,11 @@ final class MagicLinkRepository extends ServiceEntityRepository
      * Writes nothing: the link is only stored by {@see self::save()}, once it has been sent, so a
      * link whose email never left does not block the next request for its whole lifetime.
      * Returns null if an active link is already pending (prevents link flooding).
+     *
+     * `$nonce` is the secret of the client that asked for the link, if any (SEC-15): only its
+     * hash is kept, and only a verify presenting it again signs in without a confirmation.
      */
-    public function issue(User $user): ?MagicLink
+    public function issue(User $user, ?string $nonce = null): ?MagicLink
     {
         if ($this->hasActiveLinkForUser($user)) {
             $this->logger->debug('Magic link already active for user', ['user' => $user->getId()->toRfc4122()]);
@@ -46,7 +49,7 @@ final class MagicLinkRepository extends ServiceEntityRepository
 
         // Store only the hash at rest (SEC-003): the plaintext travels in the
         // magic link and never touches the database.
-        $magicLink = new MagicLink($user, hash('sha256', $plainToken), $expiresAt, plainToken: $plainToken);
+        $magicLink = new MagicLink($user, hash('sha256', $plainToken), $expiresAt, plainToken: $plainToken, nonceHash: null === $nonce ? null : hash('sha256', $nonce));
 
         $this->logger->debug('Magic link created', ['user' => $user->getId()->toRfc4122(), 'expires_at' => $expiresAt->format('c')]);
 
@@ -57,6 +60,24 @@ final class MagicLinkRepository extends ServiceEntityRepository
     {
         $this->getEntityManager()->persist($magicLink);
         $this->getEntityManager()->flush();
+    }
+
+    /**
+     * The link a token designates, if it is still consumable. Reads only: consumption stays
+     * {@see self::consumeByToken()}, whose conditional UPDATE is what makes the link single-use.
+     */
+    public function findConsumableByToken(string $token): ?MagicLink
+    {
+        $magicLink = $this->createQueryBuilder('ml')
+            ->where('ml.token = :token')
+            ->andWhere('ml.consumedAt IS NULL')
+            ->andWhere('ml.expiresAt > :now')
+            ->setParameter('token', hash('sha256', $token))
+            ->setParameter('now', $this->now())
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        return $magicLink instanceof MagicLink ? $magicLink : null;
     }
 
     /**
