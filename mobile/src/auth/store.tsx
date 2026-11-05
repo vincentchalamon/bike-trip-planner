@@ -16,17 +16,21 @@ import {
   subscribeTokenRotation,
   unregisterDeviceToken,
 } from '../notifications/push';
-import { verifyMagicToken } from './authApi';
+import { revokeSession, verifyMagicToken } from './authApi';
+import { clearLoginNonce, ensureLoginNonce, readLoginNonce } from './login-nonce';
 import { onSessionInvalidated } from './session';
-import { clearTokens, loadTokens } from './tokens';
+import { clearTokens, loadTokens, setTokens } from './tokens';
 import { clearLocalAccountData } from '../store/local-account-data';
+
+export type VerifyOutcome =
+  { kind: 'ok' } | { kind: 'confirm'; email: string } | { kind: 'invalid' };
 
 type AuthContextValue = {
   ready: boolean;
   authenticated: boolean;
   email: string | null;
   requestLink: (email: string) => Promise<boolean>;
-  verify: (token: string) => Promise<boolean>;
+  verify: (token: string, confirm?: boolean) => Promise<VerifyOutcome>;
   refreshEmail: () => Promise<void>;
   logout: () => Promise<void>;
 };
@@ -49,14 +53,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // GET /users/me captures the generation at call time and only writes back if it
   // still matches — so a response landing after logout can't resurrect `email`.
   const sessionGen = useRef(0);
+  // Read by verify(), which must not capture a stale `authenticated`.
+  const authenticatedRef = useRef(false);
   const endSession = useCallback(() => {
     sessionGen.current += 1;
+    authenticatedRef.current = false;
     setAuthenticated(false);
   }, []);
 
   useEffect(() => {
     void (async () => {
       const { jwt } = await loadTokens();
+      authenticatedRef.current = Boolean(jwt);
       setAuthenticated(Boolean(jwt));
       setReady(true);
     })();
@@ -112,17 +120,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const requestLink = useCallback(async (email: string): Promise<boolean> => {
     const { response } = await api.POST('/auth/request-link', {
-      body: { email },
+      body: { email, nonce: await ensureLoginNonce() },
       headers: { 'Content-Type': LD_JSON, Accept: LD_JSON },
     });
     return response.ok;
   }, []);
 
-  const verify = useCallback(async (token: string): Promise<boolean> => {
-    const ok = await verifyMagicToken(token);
-    setAuthenticated(ok);
-    return ok;
-  }, []);
+  const logout = useCallback(async (): Promise<void> => {
+    // Unregister the push token and revoke the refresh tokens while the JWT is
+    // still valid, so a shared device stops receiving this account's pushes
+    // (#1125) and the session cannot be resumed.
+    await dropPushToken();
+    await revokeSession();
+    await clearTokens();
+    await clearLocalAccountData();
+    endSession();
+  }, [endSession]);
+
+  // A signed-in device never switches account silently (SEC-15): it sends no
+  // nonce, so the backend asks for a confirmation, and an accepted switch ends
+  // the current session in full before the new tokens are stored.
+  const verify = useCallback(
+    async (token: string, confirm = false): Promise<VerifyOutcome> => {
+      const switching = authenticatedRef.current;
+      const nonce = switching ? null : await readLoginNonce();
+      const result = await verifyMagicToken(token, { nonce, confirm });
+      if (result.kind !== 'tokens') {
+        return result;
+      }
+      if (switching) {
+        await logout();
+      }
+      await setTokens(result.jwt, result.refresh);
+      await clearLoginNonce();
+      authenticatedRef.current = true;
+      setAuthenticated(true);
+      return { kind: 'ok' };
+    },
+    [logout],
+  );
 
   // Re-read the account email from GET /users/me (JWT Bearer) — called after an
   // email change is committed so the account screen reflects the new address
@@ -139,15 +175,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Offline / API down: keep the current email rather than reject.
     }
   }, []);
-
-  const logout = useCallback(async (): Promise<void> => {
-    // Unregister the push token while the JWT is still valid, so a shared device
-    // stops receiving this account's pushes (#1125).
-    await dropPushToken();
-    await clearTokens();
-    await clearLocalAccountData();
-    endSession();
-  }, [endSession]);
 
   const value = useMemo<AuthContextValue>(
     () => ({ ready, authenticated, email, requestLink, verify, refreshEmail, logout }),

@@ -6,6 +6,7 @@ import { Screen } from '../../src/components/ui';
 import { DeleteAccountForm } from '../../src/components/account/DeleteAccountForm';
 import { deleteAccount } from '../../src/api/account';
 import { useAuth } from '../../src/auth/store';
+import { registerDeviceToken, unregisterDeviceToken } from '../../src/notifications/push';
 import { useTheme } from '../../src/theme';
 
 export default function AccountDelete() {
@@ -19,8 +20,12 @@ export default function AccountDelete() {
 
   const onConfirm = useCallback(async () => {
     setLoading(true);
+    // Unregister the push token first: once the account is gone the call 401s and
+    // the token would stay bound server-side (SEC-31).
+    await unregisterDeviceToken().catch(() => undefined);
     const ok = await deleteAccount();
     if (!ok) {
+      void registerDeviceToken();
       setLoading(false);
       Alert.alert(t('account.deleteTitle'), t('account.delete.failed'));
       return;

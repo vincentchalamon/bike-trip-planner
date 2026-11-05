@@ -55,3 +55,8 @@ export async function scheduleLocalNotification(action: ScheduleAction): Promise
 export async function cancelLocalNotification(identifier: string): Promise<void> {
   await Notifications.cancelScheduledNotificationAsync(identifier);
 }
+
+/** Drop every scheduled reminder: they name the trips of the account that scheduled them. */
+export async function cancelAllLocalNotifications(): Promise<void> {
+  await Notifications.cancelAllScheduledNotificationsAsync();
+}
