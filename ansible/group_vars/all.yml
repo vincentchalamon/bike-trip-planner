@@ -120,15 +120,14 @@ app_release: ""
 # OpenAgenda step of the provisioner is skipped.
 openagenda_dataset: ""
 # Android App Links (ADR-053), served by the pwa at /.well-known/assetlinks.json.
-# Public values, not secrets. The fingerprint is the PUBLIC Expo debug keystore's,
-# the one that signs the CI sideload APK: whoever holds that keystore can sign an
-# app that claims these links, but that risk belongs to shipping a debug-signed
-# APK, not to assetlinks. Once a release keystore exists, replace this value (or
-# append to it, comma-separated) with the release fingerprint
+# Public values, not secrets. The fingerprint (comma-separated list) must be the
+# PRIVATE release keystore's, the one mobile-apk.yml signs the published APK with
 # (`keytool -list -v -keystore <release.keystore> | grep SHA256`, see
-# docs/runbooks/mobile-release-build.md).
+# docs/runbooks/mobile-release-build.md). The public Expo debug keystore is refused
+# by an assert in roles/app_deploy: whoever holds it could sign an app that claims
+# these links and intercepts the magic links.
 android_app_package: "coop.lestilleuls.biketripplanner"
-android_sha256_cert_fingerprints: "FA:C6:17:45:DC:09:03:78:6F:B9:ED:E6:2A:96:2B:39:9F:73:48:F0:BB:6F:89:9B:83:32:66:75:91:03:3B:9C"
+android_sha256_cert_fingerprints: "REPLACE_ME_WITH_RELEASE_KEYSTORE_SHA256"
 
 # Prod image repositories (arm64) pushed to GHCR by GHA build-images. No tag
 # here: btp-compose appends the release tag the checkout is on, so the images

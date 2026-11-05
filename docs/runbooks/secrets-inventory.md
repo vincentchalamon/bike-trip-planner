@@ -91,8 +91,12 @@ pull_request run can read them. None of them may also exist at repository level.
 | `CLAUDE_CODE_OAUTH_TOKEN` | Anthropic OAuth token | `claude.yml`, `claude-code-review.yml` | Managed by Anthropic | `CLAUDE.md` |
 | `GITHUB_TOKEN` | Built-in GHA token | All workflows | Managed by GitHub (per run) | - |
 
-`mobile-apk.yml` uses no secret: the APK is debug-signed, and its `MOBILE_API_URL`,
-`MOBILE_WEB_URL` and `CONTACT_EMAIL` inputs are repository **variables**, not secrets.
+`mobile-apk.yml` signs the APK with the release keystore, read from the **`release`
+environment** secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`,
+`ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD` (the job fails without them, see
+[mobile-release-build.md](mobile-release-build.md)). Never rotated: a new key forces every
+tester to uninstall. Its `MOBILE_API_URL`, `MOBILE_WEB_URL` and `CONTACT_EMAIL` inputs are
+repository **variables**, not secrets.
 
 ## Bootstrap (total loss)
 

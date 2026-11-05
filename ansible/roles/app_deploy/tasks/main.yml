@@ -83,6 +83,23 @@
     mode: "0640"
   no_log: true
 
+# assetlinks.json delegates the App Links (magic links included) to whoever signs
+# with these certificates: refuse a placeholder and the public debug keystore.
+- name: Refuse Android App Link fingerprints that are not a release keystore's
+  vars:
+    btp_android_debug_fingerprint: "FA:C6:17:45:DC:09:03:78:6F:B9:ED:E6:2A:96:2B:39:9F:73:48:F0:BB:6F:89:9B:83:32:66:75:91:03:3B:9C"
+    btp_android_fingerprints: "{{ android_sha256_cert_fingerprints.split(',') | map('trim') | map('upper') | list }}"
+  ansible.builtin.assert:
+    that:
+      - btp_android_fingerprints | length > 0
+      - btp_android_fingerprints | reject('match', '^([0-9A-F]{2}:){31}[0-9A-F]{2}$') | list | length == 0
+      - btp_android_debug_fingerprint not in btp_android_fingerprints
+    fail_msg: >-
+      android_sha256_cert_fingerprints must list the SHA-256 fingerprint(s) of the private
+      release keystore (AA:BB:... format), never the public Expo debug keystore's. See
+      docs/runbooks/mobile-release-build.md.
+    quiet: true
+
 # Rendered OUTSIDE app_dir on purpose. The repo now versions a `.env` holding the
 # dev defaults, and deploy-prod runs `git checkout --force <tag>` in app_dir — a
 # prod env file living there would be overwritten by every deploy, booting the
