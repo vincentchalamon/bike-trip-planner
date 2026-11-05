@@ -80,6 +80,9 @@ final readonly class TripBootstrapper
      */
     public function storeRoute(string $tripId, array $points, SourceType $sourceType, ?string $title): array
     {
+        // The title comes from the third-party source, unbounded; the column is not.
+        $title = null === $title ? null : mb_substr($title, 0, TripRequest::TITLE_MAX_LENGTH);
+
         $this->points->storeRawPoints($tripId, array_map(
             static fn (Coordinate $c): array => ['lat' => $c->lat, 'lon' => $c->lon, 'ele' => $c->ele],
             $points,

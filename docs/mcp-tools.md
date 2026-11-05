@@ -435,7 +435,7 @@ terrain, resupply, events and alerts.
 **Output:** `result` and `nextAction` (call `get_trip` again and read `categoryStatus`).
 
 **Side effects:** starts the enrichment pipeline in the background. Refused while an analysis
-is already running for the trip.
+is already queued or running for the trip.
 
 ### share_trip
 
@@ -507,7 +507,8 @@ All limits use a sliding window.
 | `mcp_envelope` | 300 requests / minute | Client IP | Every HTTP request to `/mcp`, before authentication |
 | `mcp_tool_call` | 60 calls / minute | User + OAuth client | Every tool call (each message of a batch counts) |
 | `mcp_mutation` | 20 calls / minute | User + OAuth client | Calls to `trips:write` tools, on top of `mcp_tool_call` |
-| `trip_create` | 10 / minute | User | `create_trip` (shared with the apps) |
+| `trip_create` | 10 / minute | User | `create_trip` (shared with the apps, which also spend it when a trip's source URL changes) |
+| `trip_analyze` | 10 / minute | User | `analyze_trip` (shared with the apps) |
 | `geocode` | 30 / minute | User | `search_places` (shared with the apps) |
 | `oauth_authorize` | 30 / 5 minutes | User | `/oauth/authorize` |
 | `oauth_token` | 60 / minute | Client IP | `/oauth/token` |

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\MessageHandler;
 
+use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use App\Tests\Unit\AlertMessageTestTrait;
 use App\ApiResource\Model\Coordinate;
@@ -28,6 +29,8 @@ use App\Repository\TripStageStoreInterface;
 use App\RouteFetcher\RouteFetcherInterface;
 use App\RouteFetcher\RouteFetcherRegistryInterface;
 use App\RouteFetcher\RouteFetchResult;
+use App\RouteParser\RouteTooLargeException;
+use Symfony\Component\HttpClient\Exception\TransportException;
 use App\Service\StructuralComputationService;
 use App\Service\TripBootstrapper;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -81,6 +84,64 @@ final class FetchAndParseRouteHandlerTest extends TestCase
         );
 
         // The handler must return normally (computation marked done), not re-throw.
+        $handler(new FetchAndParseRoute('trip-1'));
+    }
+
+    /**
+     * @return iterable<string, array{\Closure(RouteFetcherInterface&Stub): void}>
+     */
+    public static function tooLargeRoutes(): iterable
+    {
+        yield 'too many tours, raised by the fetcher' => [static function ($fetcher): void {
+            $fetcher->method('fetch')->willThrowException(new RouteTooLargeException('Komoot collection 1 has more than 50 tours.'));
+        }];
+        yield 'oversized response, wrapped by the transport' => [static function ($fetcher): void {
+            $fetcher->method('fetch')->willThrowException(new TransportException('too big', 0, new RouteTooLargeException('too big')));
+        }];
+        yield 'too many points across the tracks' => [static function ($fetcher): void {
+            $half = array_fill(0, intdiv(RouteTooLargeException::MAX_POINTS, 2) + 1, new Coordinate(44.0, 5.0));
+            $fetcher->method('fetch')->willReturn(new RouteFetchResult(SourceType::KOMOOT_COLLECTION, [$half, $half], 'Big'));
+        }];
+    }
+
+    /**
+     * @param \Closure(RouteFetcherInterface&Stub): void $configure
+     */
+    #[Test]
+    #[DataProvider('tooLargeRoutes')]
+    public function aTooLargeRouteIsRefusedWithItsOwnCodeAndNothingIsStored(\Closure $configure): void
+    {
+        $request = new TripRequest();
+        $request->sourceUrl = 'https://www.komoot.com/collection/1';
+
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getRequest')->willReturn($request);
+        $points = $this->createMock(TransientTripPointsStoreInterface::class);
+        $points->expects($this->never())->method('storeRawPoints');
+
+        $fetcher = $this->createStub(RouteFetcherInterface::class);
+        $configure($fetcher);
+        $registry = $this->createStub(RouteFetcherRegistryInterface::class);
+        $registry->method('get')->willReturn($fetcher);
+
+        $computationTracker = $this->createStub(ComputationTrackerInterface::class);
+        $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'settled' => 0, 'total' => 1]);
+
+        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
+        $publisher->expects($this->once())
+            ->method('publishValidationError')
+            ->with('trip-1', 'ROUTE_TOO_LARGE', $this->anything());
+
+        $messageBus = $this->createMock(MessageBusInterface::class);
+        $messageBus->expects($this->never())->method('dispatch');
+
+        $handler = new FetchAndParseRouteHandler(
+            new TripHandlerContext($computationTracker, $publisher, $this->createStub(TripGenerationTrackerInterface::class), new NullLogger(), $tripStateManager, $this->createStub(TripStageStoreInterface::class), $messageBus, $this->createAlertRenderer()),
+            $points,
+            $registry,
+            $this->bootstrapper($tripStateManager, $points, $publisher, $this->createStub(DistanceCalculatorInterface::class), $this->createStub(ElevationCalculatorInterface::class), $this->createStub(RouteSimplifierInterface::class)),
+        );
+
         $handler(new FetchAndParseRoute('trip-1'));
     }
 

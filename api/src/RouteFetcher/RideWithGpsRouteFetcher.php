@@ -47,7 +47,9 @@ final readonly class RideWithGpsRouteFetcher implements RouteFetcherInterface
         return $this->routeCache->get($cacheKey, function (ItemInterface $item) use ($routeId): RouteFetchResult {
             $item->expiresAfter(86400);
 
-            $response = $this->rwgpsClient->request('GET', \sprintf('/routes/%s.json', $routeId));
+            $response = $this->rwgpsClient->request('GET', \sprintf('/routes/%s.json', $routeId), [
+                'on_progress' => RouteResponseSize::guard(),
+            ]);
 
             $statusCode = $response->getStatusCode();
 

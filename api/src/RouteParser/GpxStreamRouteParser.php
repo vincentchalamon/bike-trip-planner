@@ -6,6 +6,7 @@ namespace App\RouteParser;
 
 use XMLReader;
 use App\ApiResource\Model\Coordinate;
+use App\ApiResource\TripRequest;
 
 final class GpxStreamRouteParser implements GpxRouteParserInterface
 {
@@ -17,6 +18,16 @@ final class GpxStreamRouteParser implements GpxRouteParserInterface
     private function hasDoctype(string $content): bool
     {
         return 1 === preg_match('/<!DOCTYPE/i', $content);
+    }
+
+    /**
+     * The byte check above only sees an ASCII-compatible encoding; a UTF-16 document spells
+     * the same DOCTYPE with interleaved null bytes. The reader decodes whatever encoding the
+     * document declares, so the node type is the check that holds for all of them.
+     */
+    private function isDoctypeNode(\XMLReader $reader): bool
+    {
+        return \XMLReader::DOC_TYPE === $reader->nodeType;
     }
 
     /**
@@ -47,6 +58,10 @@ final class GpxStreamRouteParser implements GpxRouteParserInterface
         $inName = false;
 
         while ($reader->read()) {
+            if ($this->isDoctypeNode($reader)) {
+                break;
+            }
+
             if (\XMLReader::ELEMENT === $reader->nodeType && 'trk' === $reader->localName) {
                 $inTrk = true;
             } elseif ($inTrk && \XMLReader::ELEMENT === $reader->nodeType && 'name' === $reader->localName) {
@@ -57,7 +72,8 @@ final class GpxStreamRouteParser implements GpxRouteParserInterface
                 libxml_clear_errors();
                 libxml_use_internal_errors($previous);
 
-                return '' !== $title ? $title : null;
+                // Bounded to the column it is stored in: an over-long name would fail the write.
+                return '' !== $title ? mb_substr($title, 0, TripRequest::TITLE_MAX_LENGTH) : null;
             } elseif (\XMLReader::END_ELEMENT === $reader->nodeType && 'name' === $reader->localName) {
                 $inName = false;
             } elseif (\XMLReader::ELEMENT === $reader->nodeType && 'trkpt' === $reader->localName) {
@@ -111,7 +127,23 @@ final class GpxStreamRouteParser implements GpxRouteParserInterface
         $inEle = false;
 
         while ($reader->read()) {
+            if ($this->isDoctypeNode($reader)) {
+                $reader->close();
+                libxml_clear_errors();
+                libxml_use_internal_errors($previous);
+
+                throw new \RuntimeException('GPX documents with a DOCTYPE are not allowed.');
+            }
+
             if (\XMLReader::ELEMENT === $reader->nodeType && 'trkpt' === $reader->localName) {
+                if (\count($points) >= RouteTooLargeException::MAX_POINTS) {
+                    $reader->close();
+                    libxml_clear_errors();
+                    libxml_use_internal_errors($previous);
+
+                    throw RouteTooLargeException::tooManyPoints();
+                }
+
                 $inTrkpt = true;
                 $inEle = false;
                 $lat = (float) $reader->getAttribute('lat');

@@ -168,6 +168,11 @@ final readonly class StructuralComputationService
             $numberOfDays = max(1, $numberOfDays);
         }
 
+        // The pacing loops once per day. The dates are validated against this bound, but the
+        // distance-derived count is not: a route of points scattered across the globe would
+        // otherwise ask for millions of days.
+        $numberOfDays = min($numberOfDays, TripRequest::MAX_TRIP_DAYS);
+
         // Pass raw points for accurate elevation calculation (decimated points lose altitude detail).
         // rawPoints is null when no full-resolution data was loaded (e.g. routing-only trips),
         // in which case the pacing engine falls back to decimated points.

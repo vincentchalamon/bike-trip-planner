@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\Uid\Uuid;
 use App\Tests\ApiTestCase;
 use ApiPlatform\Test\Client;
@@ -296,6 +297,48 @@ final class TripUpdateTest extends ApiTestCase
                 ['propertyPath' => 'endDate'],
             ],
         ]);
+    }
+
+    #[Test]
+    public function rejectsATripLongerThanTheMaximum(): void
+    {
+        $startDate = new \DateTimeImmutable('today +1 year');
+        $this->seedTrip(self::TRIP_ID, startDate: $startDate);
+
+        $this->client->request('PATCH', '/trips/'.self::TRIP_ID, [
+            'headers' => array_merge(['Content-Type' => 'application/merge-patch+json'], $this->authHeader($this->jwtToken)),
+            'json' => ['endDate' => '9999-12-31T00:00:00+00:00'],
+        ]);
+
+        $this->assertResponseStatusCodeSame(422);
+        $this->assertJsonContains(['violations' => [['propertyPath' => 'endDate']]]);
+    }
+
+    #[Test]
+    public function aNewSourceUrlIsThrottledLikeATripCreation(): void
+    {
+        $this->seedTrip(self::TRIP_ID);
+        // The limiter's array pool dies with the kernel, which the browser reboots between
+        // requests unless told not to.
+        $this->client->disableReboot();
+
+        /** @var RateLimiterFactory $factory */
+        $factory = self::getContainer()->get('limiter.trip_create');
+        $limiter = $factory->create($this->testUser->getId()->toRfc4122());
+        while ($limiter->consume()->isAccepted()) {
+        }
+
+        $response = $this->client->request('PATCH', '/trips/'.self::TRIP_ID, [
+            'headers' => array_merge(['Content-Type' => 'application/merge-patch+json'], $this->authHeader($this->jwtToken)),
+            'json' => ['sourceUrl' => 'https://www.komoot.com/tour/999999999'],
+        ]);
+
+        $this->assertResponseStatusCodeSame(429);
+        $this->assertGreaterThan(0, (int) ($response->getHeaders(false)['retry-after'][0] ?? 0));
+
+        /** @var InMemoryTransport $transport */
+        $transport = self::getContainer()->get('messenger.transport.async');
+        $this->assertCount(0, $transport->getSent());
     }
 
     #[Test]

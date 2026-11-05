@@ -20,7 +20,7 @@ final class TripBatchRecomputeRequest
     public function __construct(
         #[Assert\Valid]
         #[Assert\NotBlank]
-        #[Assert\Count(min: 1)]
+        #[Assert\Count(min: 1, max: 100)]
         public array $modifications = [],
     ) {
     }

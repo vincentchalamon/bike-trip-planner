@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use Symfony\Contracts\HttpClient\ResponseInterface;
 use App\Tests\ApiTestCase;
 use ApiPlatform\Test\Client;
 use App\ApiResource\TripRequest;
@@ -332,6 +333,81 @@ final class GpxUploadTest extends ApiTestCase
             // operations: this route is a plain Symfony controller and a multipart POST
             // negotiates `html`, so nothing would have shaped this body for us.
             $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/error-schema.json'));
+        } finally {
+            unlink($tempFile);
+        }
+    }
+
+    #[Test]
+    public function rejectsAUtf16GpxCarryingADoctype(): void
+    {
+        $gpx = "<?xml version=\"1.0\" encoding=\"UTF-16\"?>\n<!DOCTYPE gpx [<!ENTITY x \"y\">]>\n"
+            .'<gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1">'
+            .'<trk><name>&x;</name><trkseg><trkpt lat="50.6" lon="3.0"><ele>20</ele></trkpt>'
+            .'<trkpt lat="50.7" lon="3.1"><ele>20</ele></trkpt></trkseg></trk></gpx>';
+
+        $this->postRawGpx("\xFF\xFE".mb_convert_encoding($gpx, 'UTF-16LE', 'UTF-8'));
+
+        $this->assertResponseStatusCodeSame(422);
+    }
+
+    #[Test]
+    public function rejectsATripLongerThanTheMaximum(): void
+    {
+        $file = new UploadedFile(self::FIXTURES_DIR.'/valid-route.gpx', 'valid-route.gpx', 'application/gpx+xml', null, true);
+
+        $this->client->request('POST', '/trips/gpx-upload', [
+            'headers' => array_merge(['Content-Type' => 'multipart/form-data'], $this->authHeader($this->jwtToken)),
+            'extra' => [
+                'files' => ['gpxFile' => $file],
+                'parameters' => ['startDate' => '2026-06-01', 'endDate' => '9999-12-31'],
+            ],
+        ]);
+
+        $this->assertResponseStatusCodeSame(422);
+        $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/error-schema.json'));
+    }
+
+    #[Test]
+    public function aNestedAccommodationTypeIsIgnoredNotAServerError(): void
+    {
+        $file = new UploadedFile(self::FIXTURES_DIR.'/valid-route.gpx', 'valid-route.gpx', 'application/gpx+xml', null, true);
+
+        $this->client->request('POST', '/trips/gpx-upload', [
+            'headers' => array_merge(['Content-Type' => 'multipart/form-data'], $this->authHeader($this->jwtToken)),
+            'extra' => [
+                'files' => ['gpxFile' => $file],
+                'parameters' => ['enabledAccommodationTypes' => [['hotel'], 'camp_site']],
+            ],
+        ]);
+
+        $this->assertResponseStatusCodeSame(202);
+    }
+
+    #[Test]
+    public function anOverlongTrackNameIsCutRatherThanFailingTheUpload(): void
+    {
+        $gpx = str_replace('<name>Test Route</name>', '<name>'.str_repeat('a', 400).'</name>', (string) file_get_contents(self::FIXTURES_DIR.'/valid-route.gpx'));
+
+        $response = $this->postRawGpx($gpx);
+
+        $this->assertResponseStatusCodeSame(202);
+        $title = $response->toArray(false)['title'] ?? null;
+        $this->assertIsString($title);
+        $this->assertSame(TripRequest::TITLE_MAX_LENGTH, mb_strlen($title));
+    }
+
+    private function postRawGpx(string $content): ResponseInterface
+    {
+        $tempFile = tempnam(sys_get_temp_dir(), 'test');
+        \assert(false !== $tempFile);
+        file_put_contents($tempFile, $content);
+
+        try {
+            return $this->client->request('POST', '/trips/gpx-upload', [
+                'headers' => array_merge(['Content-Type' => 'multipart/form-data'], $this->authHeader($this->jwtToken)),
+                'extra' => ['files' => ['gpxFile' => new UploadedFile($tempFile, 'route.gpx', 'application/gpx+xml', null, true)]],
+            ]);
         } finally {
             unlink($tempFile);
         }

@@ -24,6 +24,11 @@ use App\Service\TripAnalysisDispatcher;
 use App\Repository\TripRequestRepositoryInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
+use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
+use Symfony\Component\DependencyInjection\Attribute\Target;
+use Psr\Clock\ClockInterface;
+use App\RateLimiter\RetryAfter;
 use Symfony\Component\Messenger\MessageBusInterface;
 
 /**
@@ -41,6 +46,9 @@ final readonly class TripUpdateProcessor implements ProcessorInterface
         private TripLocker $tripLocker,
         private TripAnalysisDispatcher $analysisDispatcher,
         private ComputationSupersession $supersession,
+        #[Target('trip_create')]
+        private RateLimiterFactoryInterface $tripCreateLimiter,
+        private ClockInterface $clock,
     ) {
     }
 
@@ -95,6 +103,16 @@ final readonly class TripUpdateProcessor implements ProcessorInterface
         // 30-minute TTL made an identical replay re-trigger the whole pipeline.
         $computationsToTrigger = $this->dependencyResolver->resolve($oldRequest, $data);
         $hasChanged = [] !== $computationsToTrigger;
+
+        // A new source URL re-fetches the route from the third party, which is what creating a
+        // trip costs: the same per-user budget as POST /trips, or changing the URL by PATCH
+        // would be a way around it. Checked before anything is written.
+        if (\in_array(ComputationName::ROUTE, $computationsToTrigger, true)) {
+            $limit = $this->tripCreateLimiter->create($user->getId()->toRfc4122())->consume();
+            if (!$limit->isAccepted()) {
+                throw new TooManyRequestsHttpException(RetryAfter::seconds($limit, $this->clock));
+            }
+        }
 
         $generation = null;
         if ([] !== $computationsToTrigger) {

@@ -13,6 +13,7 @@ use App\Engine\DistanceCalculatorInterface;
 use App\Engine\ElevationCalculatorInterface;
 use App\Engine\PacingEngineInterface;
 use App\Engine\RouteSimplifierInterface;
+use App\Enum\SourceType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Repository\TransientTripPointsStoreInterface;
 use App\Repository\TripRequestRepositoryInterface;
@@ -54,7 +55,23 @@ final class TripBootstrapperTest extends TestCase
         $this->bootstrapper($stageStore)->storeStages('trip-1', new TripRequest());
     }
 
-    private function bootstrapper(TripStageStoreInterface $stageStore): TripBootstrapper
+    #[Test]
+    public function anOverlongSourceTitleIsCutToTheColumnLength(): void
+    {
+        $stored = 'unset';
+        $trips = $this->createMock(TripRequestRepositoryInterface::class);
+        $trips->expects($this->once())->method('storeTitle')->willReturnCallback(static function (string $tripId, ?string $title) use (&$stored): void {
+            $stored = $title;
+        });
+
+        $this->bootstrapper($this->createStub(TripStageStoreInterface::class), $trips)
+            ->storeRoute('trip-1', [new Coordinate(45.0, 5.0)], SourceType::KOMOOT_TOUR, str_repeat('ü', 400));
+
+        self::assertIsString($stored);
+        self::assertSame(TripRequest::TITLE_MAX_LENGTH, mb_strlen($stored));
+    }
+
+    private function bootstrapper(TripStageStoreInterface $stageStore, ?TripRequestRepositoryInterface $trips = null): TripBootstrapper
     {
         // No route anywhere: neither the transient points nor the stages' own geometry.
         $points = $this->createStub(TransientTripPointsStoreInterface::class);
@@ -71,7 +88,7 @@ final class TripBootstrapperTest extends TestCase
         );
 
         return new TripBootstrapper(
-            $this->createStub(TripRequestRepositoryInterface::class),
+            $trips ?? $this->createStub(TripRequestRepositoryInterface::class),
             $this->createStub(ComputationTrackerInterface::class),
             $this->createStub(TripGenerationTrackerInterface::class),
             $points,

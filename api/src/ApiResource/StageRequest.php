@@ -13,11 +13,14 @@ final class StageRequest
     public ?int $position = null;
 
     #[Assert\NotNull(groups: ['stage_create'])]
+    #[Assert\Valid]
     public ?Coordinate $startPoint = null;
 
     #[Assert\NotNull(groups: ['stage_create'])]
+    #[Assert\Valid]
     public ?Coordinate $endPoint = null;
 
+    #[Assert\Length(max: 255)]
     public ?string $label = null;
 
     #[Assert\Positive]

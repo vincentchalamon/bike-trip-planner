@@ -50,7 +50,7 @@ final class TripAcceptedBodyTest extends ApiTestCase
         ['user' => $this->testUser, 'jwt' => $this->jwtToken] = $this->createAuthenticatedUser('test@example.com');
     }
 
-    private function seedTrip(?\DateTimeImmutable $startDate = null): void
+    private function seedTrip(?\DateTimeImmutable $startDate = null, bool $settled = false): void
     {
         $container = self::getContainer();
 
@@ -80,6 +80,14 @@ final class TripAcceptedBodyTest extends ApiTestCase
         /** @var ComputationTrackerInterface $tracker */
         $tracker = $container->get(ComputationTrackerInterface::class);
         $tracker->initializeComputations(self::TRIP_ID, ComputationName::pipeline());
+
+        // `pending` reads as queued: /analyze refuses a second pipeline behind it (409), so a
+        // trip it is meant to accept has its previous analysis settled.
+        if ($settled) {
+            foreach (ComputationName::pipeline() as $computation) {
+                $tracker->markDone(self::TRIP_ID, $computation);
+            }
+        }
     }
 
     #[Test]
@@ -133,7 +141,7 @@ final class TripAcceptedBodyTest extends ApiTestCase
     #[Test]
     public function analyzeAnswersWithTheTripItAccepted(): void
     {
-        $this->seedTrip(startDate: new \DateTimeImmutable('+10 days'));
+        $this->seedTrip(startDate: new \DateTimeImmutable('+10 days'), settled: true);
 
         $response = $this->client->request('POST', \sprintf('/trips/%s/analyze', self::TRIP_ID), [
             'headers' => array_merge(['Content-Type' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
@@ -154,7 +162,7 @@ final class TripAcceptedBodyTest extends ApiTestCase
     #[Test]
     public function anAcceptedRequestPointsAtTheTrip(): void
     {
-        $this->seedTrip();
+        $this->seedTrip(settled: true);
 
         $this->client->request('POST', \sprintf('/trips/%s/analyze', self::TRIP_ID), [
             'headers' => array_merge(['Content-Type' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
