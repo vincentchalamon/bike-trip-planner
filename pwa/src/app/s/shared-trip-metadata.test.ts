@@ -10,6 +10,7 @@ let locale: keyof typeof catalogs = "en";
 // Neutralize the client component so importing the route module only
 // exercises generateMetadata.
 vi.mock("./[code]/shared-trip-page", () => ({ default: () => null }));
+vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 vi.mock("next-intl/server", () => ({
   getTranslations: (namespace: "sharedTripMetadata") =>
     Promise.resolve(
@@ -37,17 +38,17 @@ describe("generateMetadata (shared trip)", () => {
   it("falls back to the generic title when the backend responds non-OK (revoked/unknown code)", async () => {
     const fetchSpy = mockFetch(() => Promise.resolve({ ok: false }));
 
-    const meta = await generateMetadata(params("missing"));
+    const meta = await generateMetadata(params("missing0"));
 
     expect(meta).toEqual({ title: "Shared trip — Bike Trip Planner" });
     expect(fetchSpy).toHaveBeenCalledOnce();
-    expect(fetchSpy.mock.calls[0]?.[0]).toContain("/s/missing");
+    expect(fetchSpy.mock.calls[0]?.[0]).toContain("/s/missing0");
   });
 
   it("falls back to the generic title when the fetch throws (timeout/network)", async () => {
     mockFetch(() => Promise.reject(new Error("aborted")));
 
-    const meta = await generateMetadata(params("slow"));
+    const meta = await generateMetadata(params("slowslow"));
 
     expect(meta).toEqual({ title: "Shared trip — Bike Trip Planner" });
   });
@@ -67,12 +68,12 @@ describe("generateMetadata (shared trip)", () => {
       }),
     );
 
-    const meta = await generateMetadata(params("abc123"));
+    const meta = await generateMetadata(params("abc12345"));
 
     expect(meta.title).toBe("Tour des Flandres — Bike Trip Planner");
     expect(meta.description).toBe("Shared bike route: 80 km, 1000 m D+.");
     expect(meta.openGraph).toMatchObject({
-      url: "/s/abc123",
+      url: "/s/abc12345",
       siteName: "Bike Trip Planner",
       type: "article",
     });
@@ -87,7 +88,7 @@ describe("generateMetadata (shared trip)", () => {
       }),
     );
 
-    const meta = await generateMetadata(params("xyz"));
+    const meta = await generateMetadata(params("xyzxyzxy"));
 
     expect(meta.title).toBe("Bike trip — Bike Trip Planner");
     expect(meta.description).toBe("Shared bike route.");
@@ -106,7 +107,7 @@ describe("generateMetadata (shared trip)", () => {
       }),
     );
 
-    const meta = await generateMetadata(params("fr1"));
+    const meta = await generateMetadata(params("fr1fr1fr"));
 
     expect(meta.title).toBe("Voyage à vélo — Bike Trip Planner");
     expect(meta.description).toBe("Itinéraire vélo partagé : 42 km, 0 m D+.");

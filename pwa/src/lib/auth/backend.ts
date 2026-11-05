@@ -1,3 +1,5 @@
+import { headers } from "next/headers";
+
 /**
  * Server-to-server calls to the INTERNAL backend from the Next.js BFF route
  * handlers (`src/app/api/auth/*`).
@@ -13,6 +15,26 @@ export function backendUrl(): string {
   return process.env.API_BACKEND_URL ?? "http://php";
 }
 
+/**
+ * Relays the inbound `X-Forwarded-For` chain, unchanged, to the backend.
+ *
+ * Without it every web user shares the pwa container's IP in the backend's
+ * IP-keyed rate limiters. The chain is passed as received (not reduced to one
+ * address): Symfony walks it from the right and skips `TRUSTED_PROXIES`, so the
+ * hops Cloudflare, Traefik and Caddy appended still decide the client IP and a
+ * value the client prepended is never picked.
+ */
+export function forwardedForHeader(
+  incoming: Pick<Headers, "get">,
+): Record<string, string> {
+  const chain = incoming.get("x-forwarded-for")?.trim();
+  return chain ? { "X-Forwarded-For": chain } : {};
+}
+
+export async function clientIpHeaders(): Promise<Record<string, string>> {
+  return forwardedForHeader(await headers());
+}
+
 export async function backendFetch(
   path: string,
   init?: RequestInit,
@@ -22,6 +44,7 @@ export async function backendFetch(
     headers: {
       "Content-Type": "application/ld+json",
       Accept: "application/ld+json",
+      ...(await clientIpHeaders()),
       ...init?.headers,
     },
     cache: "no-store",
