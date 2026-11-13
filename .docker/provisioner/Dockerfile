@@ -1,5 +1,5 @@
 # Stage 1: Composer dependencies
-FROM php:8.5-cli-bookworm@sha256:104890ada56869090c9cd0ec709fe205834d3e383b46d9995dc16cd6388a9302 AS deps
+FROM php:8.5-cli-bookworm@sha256:050713ce008e2360ea9dc96e1f9a075690132388d917fc3552806f7a7be6f2a0 AS deps
 
 # hadolint ignore=DL3008
 RUN apt-get update \
@@ -18,7 +18,7 @@ COPY provisioner/ ./
 RUN composer dump-autoload --classmap-authoritative --no-dev
 
 # Stage 2: Dev (sources bind-mounted via compose.yaml)
-FROM php:8.5-cli-bookworm@sha256:104890ada56869090c9cd0ec709fe205834d3e383b46d9995dc16cd6388a9302 AS dev
+FROM php:8.5-cli-bookworm@sha256:050713ce008e2360ea9dc96e1f9a075690132388d917fc3552806f7a7be6f2a0 AS dev
 
 # osm2pgsql + postgresql-client (psql) drive the Tier-1 PostGIS import (ADR-040).
 # hadolint ignore=DL3008
@@ -55,7 +55,7 @@ RUN chmod +x /usr/local/bin/provisioner-entrypoint.sh
 ENTRYPOINT ["/usr/local/bin/provisioner-entrypoint.sh"]
 
 # Stage 3: Production
-FROM php:8.5-cli-bookworm@sha256:104890ada56869090c9cd0ec709fe205834d3e383b46d9995dc16cd6388a9302 AS prod
+FROM php:8.5-cli-bookworm@sha256:050713ce008e2360ea9dc96e1f9a075690132388d917fc3552806f7a7be6f2a0 AS prod
 
 # osm2pgsql + postgresql-client (psql) drive the Tier-1 PostGIS import (ADR-040).
 # hadolint ignore=DL3008
