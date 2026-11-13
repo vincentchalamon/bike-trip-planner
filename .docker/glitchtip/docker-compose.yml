@@ -44,7 +44,7 @@ services:
       - glitchtip
 
   glitchtip-web:
-    image: glitchtip/glitchtip:6.2.6
+    image: glitchtip/glitchtip:7.0.0
     restart: unless-stopped
     depends_on:
       glitchtip-postgres:
@@ -73,7 +73,7 @@ services:
       retries: 3
 
   glitchtip-worker:
-    image: glitchtip/glitchtip:6.2.6
+    image: glitchtip/glitchtip:7.0.0
     restart: unless-stopped
     depends_on:
       glitchtip-postgres:
